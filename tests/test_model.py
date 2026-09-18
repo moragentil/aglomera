@@ -43,6 +43,40 @@ def test_todos_evacuaron_al_final_de_un_pasillo_recto():
     assert model.cantidad_restantes() == 0
 
 
+def test_bloqueados_aparece_en_un_cuello_de_botella():
+    # sala 5x3 con una pared partida en dos, con una sola puerta en (2, 1)
+    model = EvacuacionModel(
+        ancho=5, alto=3, num_agentes=5, salidas=[(4, 1)], muros=[(2, 0), (2, 2)], rng=1
+    )
+    celdas = {c.coordinate: c for c in model.espacio.all_cells}
+    celdas_del_lado_izquierdo = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 2)]
+
+    # fuerzo a los 5 peatones al lado izquierdo, todos compitiendo por la
+    # unica puerta (2, 1), para probar el bloqueo de forma determinista en
+    # vez de depender de donde los ubica al azar el modelo al crearse.
+    # Primero los saco a todos de su celda para no chocar entre si al
+    # reubicarlos (dos peatones no pueden pisar la misma celda a la vez).
+    for peaton in model.agents:
+        peaton.cell = None
+    for peaton, coordenada in zip(model.agents, celdas_del_lado_izquierdo):
+        peaton.cell = celdas[coordenada]
+
+    hubo_bloqueo_en_algun_paso = False
+    for _ in range(30):
+        if model.todos_evacuaron():
+            break
+        model.step()
+        if model.cantidad_bloqueados() > 0:
+            hubo_bloqueo_en_algun_paso = True
+
+    assert hubo_bloqueo_en_algun_paso
+    assert model.todos_evacuaron()
+
+    df = model.datacollector.get_model_vars_dataframe()
+    assert "bloqueados" in df.columns
+    assert df["bloqueados"].max() > 0
+
+
 def test_el_datacollector_registra_evacuados_crecientes_por_paso():
     model = EvacuacionModel(ancho=5, alto=1, num_agentes=3, salidas=[(0, 0)], rng=1)
 

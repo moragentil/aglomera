@@ -24,6 +24,7 @@ class EvacuacionModel(Model):
             model_reporters={
                 "evacuados": lambda m: m.cantidad_evacuados(),
                 "restantes": lambda m: m.cantidad_restantes(),
+                "bloqueados": lambda m: m.cantidad_bloqueados(),
             }
         )
 
@@ -50,6 +51,9 @@ class EvacuacionModel(Model):
 
     def cantidad_restantes(self):
         return len(self.agents) - self.cantidad_evacuados()
+
+    def cantidad_bloqueados(self):
+        return sum(1 for peaton in self.agents if peaton.bloqueado)
 
     def todos_evacuaron(self):
         return self.cantidad_restantes() == 0

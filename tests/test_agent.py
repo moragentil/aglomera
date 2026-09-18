@@ -28,9 +28,28 @@ def test_el_peaton_no_se_mueve_a_una_celda_ocupada():
     peaton = Peaton(model, celdas[(4, 0)])
     peaton.step()
 
-    # (3, 0) esta ocupado por el bloqueador: el peaton se queda quieto
+    # (3, 0) esta ocupado por el bloqueador: el peaton se queda quieto,
+    # y como (3, 0) SI lo hubiera acercado a la salida, cuenta como bloqueo
+    # (congestion), no como que no tenia adonde ir.
     assert peaton.cell.coordinate == (4, 0)
     assert bloqueador.cell.coordinate == (3, 0)
+    assert peaton.bloqueado
+    assert not bloqueador.bloqueado
+
+
+def test_el_peaton_no_se_bloquea_si_no_existe_forma_de_mejorar():
+    model = Model(rng=1)
+    # muro completo en x=2: todo lo que queda detras es inalcanzable
+    espacio = crear_espacio(5, 1, salidas=[(0, 0)], muros=[(2, 0)], random=model.random)
+    celdas = _celdas_por_coordenada(espacio)
+
+    peaton = Peaton(model, celdas[(4, 0)])
+    peaton.step()
+
+    # no se mueve, pero no es "culpa" de nadie: no hay ninguna vecina,
+    # libre u ocupada, que lo acerque a la salida.
+    assert peaton.cell.coordinate == (4, 0)
+    assert not peaton.bloqueado
 
 
 def test_el_peaton_se_evacua_al_llegar_a_una_celda_de_salida():

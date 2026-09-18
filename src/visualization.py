@@ -19,7 +19,8 @@ from src.space import es_muro, es_salida
 
 PISO, MURO, SALIDA = range(3)
 COLORES = ListedColormap(["white", "black", "#2ca02c"])
-COLOR_AGENTE = "#1f77b4"
+COLOR_AGENTE_LIBRE = "#1f77b4"
+COLOR_AGENTE_BLOQUEADO = "#d62728"
 FRACCION_DIAMETRO_CELDA = 0.75
 
 
@@ -38,18 +39,21 @@ def _grilla_de_estado(model):
 
 
 def _posiciones_de_agentes(model):
-    xs, ys = [], []
+    libres = ([], [])
+    bloqueados = ([], [])
     for peaton in model.agents:
-        if peaton.cell is not None:
-            x, y = peaton.cell.coordinate
-            xs.append(x)
-            ys.append(y)
-    return xs, ys
+        if peaton.cell is None:
+            continue
+        destino = bloqueados if peaton.bloqueado else libres
+        x, y = peaton.cell.coordinate
+        destino[0].append(x)
+        destino[1].append(y)
+    return libres, bloqueados
 
 
 def GrillaRecinto(model):
     grilla = _grilla_de_estado(model)
-    xs, ys = _posiciones_de_agentes(model)
+    (libres_x, libres_y), (bloqueados_x, bloqueados_y) = _posiciones_de_agentes(model)
 
     fig, ax = plt.subplots()
     ax.imshow(grilla, cmap=COLORES, vmin=0, vmax=2, origin="lower")
@@ -64,22 +68,22 @@ def GrillaRecinto(model):
         ax.transData.transform((1, 0))[0] - ax.transData.transform((0, 0))[0]
     )
     diametro_pt = ancho_celda_px * (72 / fig.dpi) * FRACCION_DIAMETRO_CELDA
-
-    ax.scatter(
-        xs,
-        ys,
-        s=diametro_pt**2,
-        color=COLOR_AGENTE,
-        edgecolors="white",
-        linewidths=0.6,
-        zorder=3,
+    kwargs_circulo = dict(
+        s=diametro_pt**2, edgecolors="white", linewidths=0.6, zorder=3
     )
+
+    # Los bloqueados (quieren avanzar pero la mejor celda esta ocupada) se
+    # pintan de otro color: es lo que deja ver el arqueo a simple vista,
+    # como un amontonamiento rojo justo en la puerta angosta.
+    ax.scatter(libres_x, libres_y, color=COLOR_AGENTE_LIBRE, **kwargs_circulo)
+    ax.scatter(bloqueados_x, bloqueados_y, color=COLOR_AGENTE_BLOQUEADO, **kwargs_circulo)
 
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title(
         f"Paso {model.pasos_transcurridos} — "
-        f"evacuados: {model.cantidad_evacuados()} / {len(model.agents)}"
+        f"evacuados: {model.cantidad_evacuados()} / {len(model.agents)} — "
+        f"bloqueados: {model.cantidad_bloqueados()}"
     )
 
     elemento = solara.FigureMatplotlib(fig)
