@@ -58,3 +58,5 @@ class EvacuacionModel(Model):
         self.agents.shuffle_do("step")
         self.pasos_transcurridos += 1
         self.datacollector.collect(self)
+        if self.todos_evacuaron():
+            self.running = False
