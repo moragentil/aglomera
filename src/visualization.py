@@ -2,28 +2,30 @@
 
 En vez de pelear con el sistema nuevo de renderizado de Mesa (SpaceRenderer,
 que solo sabe dibujar "agentes" y no conoce nuestros muros/salidas, que son
-propiedades de celda, no agentes), dibujamos la grilla a mano como una
-imagen categórica con matplotlib: cada celda es un pixel de un color según
-su estado. Es más simple y más fácil de verificar visualmente.
+propiedades de celda, no agentes), dibujamos la grilla a mano con
+matplotlib: el piso/muros/salida son una imagen categórica de fondo
+(imshow), y los peatones se superponen encima como círculos (scatter), no
+como pixeles de la grilla. Así un peatón nunca tapa el color de la celda
+en la que está parado, y dos peatones en celdas vecinas se distinguen como
+individuos en vez de fundirse en un bloque sólido del mismo color.
 """
 
 import matplotlib.pyplot as plt
 import numpy as np
 import solara
 from matplotlib.colors import ListedColormap
-from matplotlib.patches import Rectangle
 
 from src.space import es_muro, es_salida
 
-PISO, MURO, SALIDA, AGENTE = range(4)
-COLORES = ListedColormap(["white", "black", "#2ca02c", "#1f77b4"])
-COLOR_BORDE_SALIDA = "#146c2e"
+PISO, MURO, SALIDA = range(3)
+COLORES = ListedColormap(["white", "black", "#2ca02c"])
+COLOR_AGENTE = "#1f77b4"
+FRACCION_DIAMETRO_CELDA = 0.75
 
 
 def _grilla_de_estado(model):
     ancho, alto = model.espacio.dimensions
     grilla = np.full((alto, ancho), PISO)
-    coordenadas_de_salida = []
 
     for celda in model.espacio.all_cells:
         x, y = celda.coordinate
@@ -31,36 +33,47 @@ def _grilla_de_estado(model):
             grilla[y, x] = MURO
         elif es_salida(celda):
             grilla[y, x] = SALIDA
-            coordenadas_de_salida.append((x, y))
 
+    return grilla
+
+
+def _posiciones_de_agentes(model):
+    xs, ys = [], []
     for peaton in model.agents:
         if peaton.cell is not None:
             x, y = peaton.cell.coordinate
-            grilla[y, x] = AGENTE
-
-    return grilla, coordenadas_de_salida
+            xs.append(x)
+            ys.append(y)
+    return xs, ys
 
 
 def GrillaRecinto(model):
-    grilla, coordenadas_de_salida = _grilla_de_estado(model)
+    grilla = _grilla_de_estado(model)
+    xs, ys = _posiciones_de_agentes(model)
 
     fig, ax = plt.subplots()
-    ax.imshow(grilla, cmap=COLORES, vmin=0, vmax=3, origin="lower")
+    ax.imshow(grilla, cmap=COLORES, vmin=0, vmax=2, origin="lower")
 
-    # El peatón se pinta encima de la salida y la tapa (mismo pixel). El
-    # contorno se dibuja aparte, por arriba de todo, para que la salida
-    # siga siendo identificable aunque haya alguien parado ahí.
-    for x, y in coordenadas_de_salida:
-        ax.add_patch(
-            Rectangle(
-                (x - 0.5, y - 0.5),
-                1,
-                1,
-                fill=False,
-                edgecolor=COLOR_BORDE_SALIDA,
-                linewidth=2.5,
-            )
-        )
+    # El tamaño de los círculos en scatter se define en puntos, no en
+    # unidades de la grilla, así que hay que convertir: cuánto mide en
+    # pixeles una celda de la grilla en esta figura en particular, y de ahí
+    # a puntos (72 puntos = 1 pulgada). fig.canvas.draw() fuerza a
+    # matplotlib a calcular el layout antes de poder preguntar eso.
+    fig.canvas.draw()
+    ancho_celda_px = (
+        ax.transData.transform((1, 0))[0] - ax.transData.transform((0, 0))[0]
+    )
+    diametro_pt = ancho_celda_px * (72 / fig.dpi) * FRACCION_DIAMETRO_CELDA
+
+    ax.scatter(
+        xs,
+        ys,
+        s=diametro_pt**2,
+        color=COLOR_AGENTE,
+        edgecolors="white",
+        linewidths=0.6,
+        zorder=3,
+    )
 
     ax.set_xticks([])
     ax.set_yticks([])
