@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "solara-aglomera",
+      "runtimeExecutable": "/Users/moragentil/Documents/UTN 2026/Sistemas de la Industria 4.0/aglomera/venv/bin/solara",
+      "runtimeArgs": ["run", "app.py", "--port", "8765"],
+      "port": 8765
+    }
+  ]
+}
