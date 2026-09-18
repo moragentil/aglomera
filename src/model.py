@@ -1,9 +1,21 @@
 """Modelo de la simulación: crea el espacio y los peatones, y corre el loop.
 
-Cada paso (step) activa a todos los peatones en orden aleatorio (activación
-asincrónica: uno se mueve, "libera" o "toma" una celda, y el siguiente ya ve
-ese cambio — es lo que hace que los cuellos de botella sean realistas).
-Las métricas agregadas se registran con el DataCollector de Mesa.
+Cada paso (step) tiene tres fases, porque la activación es sincrónica (a
+diferencia de un simple agents.shuffle_do("step"), donde cada agente ya ve
+lo que hicieron los anteriores en el mismo paso):
+
+1. Evacuar: cualquiera parado en una celda de salida se va, sin conflicto
+   posible (nadie mas quiere "salir" de esa celda).
+2. Decidir: todos los peatones activos eligen, mirando la misma foto del
+   mundo (nadie se movio todavia), a que celda querrian moverse.
+3. Resolver: si dos o mas peatones quieren la MISMA celda vacia, es un
+   conflicto real. Con probabilidad `probabilidad_friccion` nadie de ese
+   grupo se mueve este paso (fricción); si no, se elige a uno al azar.
+
+Esta separación es la que hace posible que la fricción tenga sentido:
+bajo activación asincrónica (turno por turno) nunca hay dos peatones
+compitiendo por la misma celda al mismo tiempo, porque el orden de turnos
+ya resuelve la disputa de antemano.
 """
 
 from mesa import Model
@@ -14,11 +26,22 @@ from src.space import crear_espacio, es_muro, es_salida
 
 
 class EvacuacionModel(Model):
-    def __init__(self, ancho, alto, num_agentes, salidas, muros=None, rng=None):
+    def __init__(
+        self,
+        ancho,
+        alto,
+        num_agentes,
+        salidas,
+        muros=None,
+        rng=None,
+        probabilidad_agresivo=0.0,
+        probabilidad_friccion=0.0,
+    ):
         super().__init__(rng=rng)
 
         self.espacio = crear_espacio(ancho, alto, salidas, muros, random=self.random)
         self.pasos_transcurridos = 0
+        self.probabilidad_friccion = probabilidad_friccion
 
         self.datacollector = DataCollector(
             model_reporters={
@@ -29,7 +52,8 @@ class EvacuacionModel(Model):
         )
 
         for celda in self._elegir_celdas_iniciales(num_agentes):
-            Peaton(self, celda)
+            agresivo = self.random.random() < probabilidad_agresivo
+            Peaton(self, celda, agresivo=agresivo)
 
         self.datacollector.collect(self)
 
@@ -59,7 +83,31 @@ class EvacuacionModel(Model):
         return self.cantidad_restantes() == 0
 
     def step(self):
-        self.agents.shuffle_do("step")
+        for peaton in self.agents:
+            peaton.evacuar_si_llego()
+
+        pretendientes_por_celda = {}
+        for peaton in self.agents:
+            if peaton.evacuado:
+                continue
+            celda_deseada, hay_progreso_posible = peaton.decidir_movimiento()
+            if celda_deseada is None:
+                peaton.bloqueado = hay_progreso_posible
+            else:
+                pretendientes_por_celda.setdefault(celda_deseada, []).append(peaton)
+
+        for celda, pretendientes in pretendientes_por_celda.items():
+            hay_conflicto = len(pretendientes) > 1
+            si_hay_friccion = hay_conflicto and self.random.random() < self.probabilidad_friccion
+            ganador = None if si_hay_friccion else self.random.choice(pretendientes)
+
+            for peaton in pretendientes:
+                if peaton is ganador:
+                    peaton.cell = celda
+                    peaton.bloqueado = False
+                else:
+                    peaton.bloqueado = True
+
         self.pasos_transcurridos += 1
         self.datacollector.collect(self)
         if self.todos_evacuaron():

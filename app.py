@@ -21,6 +21,12 @@ model_params = {
     "muros": MURO_CON_PUERTA,
     "rng": 1,
     "num_agentes": Slider("Cantidad de peatones", value=40, min=5, max=120, step=5),
+    "probabilidad_agresivo": Slider(
+        "Probabilidad de ser agresivo", value=0.0, min=0.0, max=1.0, step=0.1
+    ),
+    "probabilidad_friccion": Slider(
+        "Probabilidad de fricción", value=0.0, min=0.0, max=1.0, step=0.1
+    ),
 }
 
 modelo_inicial = EvacuacionModel(
