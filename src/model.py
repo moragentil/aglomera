@@ -16,6 +16,11 @@ Esta separación es la que hace posible que la fricción tenga sentido:
 bajo activación asincrónica (turno por turno) nunca hay dos peatones
 compitiendo por la misma celda al mismo tiempo, porque el orden de turnos
 ya resuelve la disputa de antemano.
+
+Si `seguir_un_peaton` está activo (default), el primer peatón creado
+queda marcado como `seguido` y el modelo le va agregando cada celda por
+la que pasa a `peaton.historial`, para poder dibujar su recorrido en la
+visualización.
 """
 
 from mesa import Model
@@ -36,12 +41,17 @@ class EvacuacionModel(Model):
         rng=None,
         probabilidad_agresivo=0.0,
         probabilidad_friccion=0.0,
+        tipo_vecindad="von_neumann",
+        seguir_un_peaton=True,
     ):
         super().__init__(rng=rng)
 
-        self.espacio = crear_espacio(ancho, alto, salidas, muros, random=self.random)
+        self.espacio = crear_espacio(
+            ancho, alto, salidas, muros, random=self.random, tipo_vecindad=tipo_vecindad
+        )
         self.pasos_transcurridos = 0
         self.probabilidad_friccion = probabilidad_friccion
+        self.peaton_seguido = None
 
         self.datacollector = DataCollector(
             model_reporters={
@@ -51,9 +61,12 @@ class EvacuacionModel(Model):
             }
         )
 
-        for celda in self._elegir_celdas_iniciales(num_agentes):
+        for i, celda in enumerate(self._elegir_celdas_iniciales(num_agentes)):
             agresivo = self.random.random() < probabilidad_agresivo
-            Peaton(self, celda, agresivo=agresivo)
+            seguido = seguir_un_peaton and i == 0
+            peaton = Peaton(self, celda, agresivo=agresivo, seguido=seguido)
+            if seguido:
+                self.peaton_seguido = peaton
 
         self.datacollector.collect(self)
 
@@ -105,6 +118,8 @@ class EvacuacionModel(Model):
                 if peaton is ganador:
                     peaton.cell = celda
                     peaton.bloqueado = False
+                    if peaton.seguido:
+                        peaton.historial.append(celda.coordinate)
                 else:
                     peaton.bloqueado = True
 

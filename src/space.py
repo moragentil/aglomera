@@ -8,17 +8,29 @@ agente lo consulta en cada paso en vez de recalcular un camino propio.
 
 from collections import deque
 
-from mesa.discrete_space import OrthogonalVonNeumannGrid
+from mesa.discrete_space import OrthogonalMooreGrid, OrthogonalVonNeumannGrid
+
+GRILLAS_POR_TIPO_DE_VECINDAD = {
+    "von_neumann": OrthogonalVonNeumannGrid,  # 4 vecinas: arriba/abajo/izq/der
+    "moore": OrthogonalMooreGrid,  # 8 vecinas: suma las 4 diagonales
+}
 
 
-def crear_espacio(ancho, alto, salidas, muros=None, random=None):
-    """Crea la grilla y marca salidas/muros como propiedades de cada celda."""
+def crear_espacio(ancho, alto, salidas, muros=None, random=None, tipo_vecindad="von_neumann"):
+    """Crea la grilla y marca salidas/muros como propiedades de cada celda.
+
+    `tipo_vecindad` controla si los peatones pueden moverse en diagonal
+    ("moore") o solo en las 4 direcciones ortogonales ("von_neumann", el
+    default). Con diagonales, la distancia del floor field se parece más a
+    la distancia "Chebyshev" que a la "Manhattan": un obstáculo de una sola
+    celda casi nunca fuerza un desvío real, porque se lo esquiva gratis en
+    diagonal. Eso vuelve los cuellos de botella menos severos.
+    """
     salidas = set(salidas)
     muros = set(muros or [])
 
-    espacio = OrthogonalVonNeumannGrid(
-        (ancho, alto), torus=False, capacity=1, random=random
-    )
+    clase_de_grilla = GRILLAS_POR_TIPO_DE_VECINDAD[tipo_vecindad]
+    espacio = clase_de_grilla((ancho, alto), torus=False, capacity=1, random=random)
 
     for celda in espacio.all_cells:
         celda.properties["es_salida"] = celda.coordinate in salidas

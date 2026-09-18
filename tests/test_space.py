@@ -49,3 +49,28 @@ def test_floor_field_deja_inalcanzable_lo_que_queda_detras_de_una_pared_completa
     assert distancia_a_salida(celdas[(1, 1)]) == 1
     assert distancia_a_salida(celdas[(3, 1)]) == float("inf")
     assert distancia_a_salida(celdas[(4, 1)]) == float("inf")
+
+
+def test_con_vecindad_moore_la_distancia_es_diagonal_no_manhattan():
+    # mismo cuarto 3x3 abierto que el test de linea recta, pero con
+    # diagonales habilitadas: a (2, 2) se llega en 2 pasos (diagonal),
+    # no en 4 (Manhattan) como con von_neumann.
+    espacio = crear_espacio(
+        3, 3, salidas=[(0, 0)], random=random.Random(1), tipo_vecindad="moore"
+    )
+    celdas = _celdas_por_coordenada(espacio)
+
+    assert distancia_a_salida(celdas[(2, 2)]) == 2
+
+
+def test_con_vecindad_moore_un_muro_de_una_celda_no_fuerza_ningun_desvio():
+    # el mismo escenario que "rodea_un_muro", pero con diagonales: el
+    # peaton esquiva el muro central gratis, sin pagar el costo de 4 que
+    # pagaba con von_neumann. Es justamente la razon por la que elegimos
+    # von_neumann como default para los cuellos de botella.
+    espacio = crear_espacio(
+        3, 3, salidas=[(0, 1)], muros=[(1, 1)], random=random.Random(1), tipo_vecindad="moore"
+    )
+    celdas = _celdas_por_coordenada(espacio)
+
+    assert distancia_a_salida(celdas[(2, 1)]) == 2
