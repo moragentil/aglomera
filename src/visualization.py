@@ -8,6 +8,11 @@ matplotlib: el piso/muros/salida son una imagen categórica de fondo
 como pixeles de la grilla. Así un peatón nunca tapa el color de la celda
 en la que está parado, y dos peatones en celdas vecinas se distinguen como
 individuos en vez de fundirse en un bloque sólido del mismo color.
+
+Además, si el modelo tiene un `peaton_seguido` (ver model.py), se le
+dibuja encima el camino recorrido (una línea) y un marcador más grande
+con borde violeta en su posición actual, para poder seguirlo a simple
+vista entre toda la multitud.
 """
 
 import matplotlib.pyplot as plt
@@ -21,6 +26,7 @@ PISO, MURO, SALIDA = range(3)
 COLORES = ListedColormap(["white", "black", "#2ca02c"])
 COLOR_AGENTE_LIBRE = "#1f77b4"
 COLOR_AGENTE_BLOQUEADO = "#d62728"
+COLOR_SEGUIDO = "#9467bd"
 FRACCION_DIAMETRO_CELDA = 0.75
 
 
@@ -42,8 +48,8 @@ def _posiciones_de_agentes(model):
     libres = ([], [])
     bloqueados = ([], [])
     for peaton in model.agents:
-        if peaton.cell is None:
-            continue
+        if peaton.cell is None or peaton.seguido:
+            continue  # el seguido se dibuja aparte, con su propio marcador
         destino = bloqueados if peaton.bloqueado else libres
         x, y = peaton.cell.coordinate
         destino[0].append(x)
@@ -77,6 +83,24 @@ def GrillaRecinto(model):
     # como un amontonamiento rojo justo en la puerta angosta.
     ax.scatter(libres_x, libres_y, color=COLOR_AGENTE_LIBRE, **kwargs_circulo)
     ax.scatter(bloqueados_x, bloqueados_y, color=COLOR_AGENTE_BLOQUEADO, **kwargs_circulo)
+
+    seguido = model.peaton_seguido
+    if seguido is not None and seguido.historial:
+        xs_historial = [c[0] for c in seguido.historial]
+        ys_historial = [c[1] for c in seguido.historial]
+        ax.plot(xs_historial, ys_historial, color=COLOR_SEGUIDO, linewidth=1.5, zorder=4)
+
+        if seguido.cell is not None:
+            color_relleno = COLOR_AGENTE_BLOQUEADO if seguido.bloqueado else COLOR_AGENTE_LIBRE
+            ax.scatter(
+                [seguido.cell.coordinate[0]],
+                [seguido.cell.coordinate[1]],
+                s=diametro_pt**2 * 1.8,
+                color=color_relleno,
+                edgecolors=COLOR_SEGUIDO,
+                linewidths=2.5,
+                zorder=5,
+            )
 
     ax.set_xticks([])
     ax.set_yticks([])

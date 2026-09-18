@@ -19,6 +19,35 @@ def test_no_permite_mas_agentes_que_celdas_disponibles():
         EvacuacionModel(ancho=2, alto=1, num_agentes=5, salidas=[(1, 0)], rng=1)
 
 
+def test_el_peaton_seguido_registra_su_recorrido_paso_a_paso():
+    model = EvacuacionModel(ancho=5, alto=1, num_agentes=3, salidas=[(0, 0)], rng=1)
+
+    seguido = model.peaton_seguido
+    assert seguido is not None
+    assert seguido.seguido
+    assert len(seguido.historial) == 1  # la celda inicial
+
+    for _ in range(10):
+        if model.todos_evacuaron():
+            break
+        celda_anterior = seguido.cell.coordinate if seguido.cell is not None else None
+        model.step()
+        if celda_anterior is not None and not seguido.evacuado:
+            assert seguido.historial[-1] == seguido.cell.coordinate
+
+    # se movio mas de una vez: el historial creció mas alla de la celda inicial
+    assert len(seguido.historial) > 1
+
+
+def test_seguir_un_peaton_false_no_marca_a_nadie():
+    model = EvacuacionModel(
+        ancho=5, alto=1, num_agentes=3, salidas=[(0, 0)], rng=1, seguir_un_peaton=False
+    )
+
+    assert model.peaton_seguido is None
+    assert all(not peaton.seguido for peaton in model.agents)
+
+
 def test_step_avanza_el_contador_de_pasos_y_mueve_agentes():
     model = EvacuacionModel(ancho=5, alto=1, num_agentes=1, salidas=[(0, 0)], rng=1)
     peaton = next(iter(model.agents))

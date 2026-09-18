@@ -21,6 +21,10 @@ Un peatón `agresivo` no tolera esperar: si su mejor opción está ocupada,
 en vez de quedarse quieto elige cualquier celda libre vecina como destino
 deseado, aunque no lo acerque a la salida — con el riesgo de terminar en
 un conflicto con otro peatón que quiere esa misma celda lateral.
+
+Un peatón `seguido` guarda en `historial` cada celda por la que pasó (el
+modelo se encarga de agregarla cuando lo mueve), para poder dibujar su
+recorrido completo en la visualización.
 """
 
 from mesa.discrete_space import CellAgent
@@ -29,12 +33,14 @@ from src.space import distancia_a_salida, es_muro, es_salida
 
 
 class Peaton(CellAgent):
-    def __init__(self, model, cell, agresivo=False):
+    def __init__(self, model, cell, agresivo=False, seguido=False):
         super().__init__(model)
         self.cell = cell
         self.evacuado = False
         self.bloqueado = False
         self.agresivo = agresivo
+        self.seguido = seguido
+        self.historial = [cell.coordinate] if seguido else []
 
     def evacuar_si_llego(self):
         """Si esta parado en una celda de salida, evacua y la libera."""
