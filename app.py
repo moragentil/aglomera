@@ -18,7 +18,7 @@ MURO_CON_PUERTA = [(7, y) for y in range(ALTO) if y != 4]
 # de Mesa no trae un selector desplegable para parametros de texto, asi que
 # para compararlos hay que cambiar esta linea a mano y reiniciar la app
 # (o usar experiments/run_batch.py, que si puede barrer ambos valores).
-TIPO_VECINDAD = "von_neumann"
+TIPO_VECINDAD = "moore"
 
 model_params = {
     "ancho": 15,
@@ -33,6 +33,13 @@ model_params = {
     ),
     "probabilidad_friccion": Slider(
         "Probabilidad de fricción", value=0.0, min=0.0, max=1.0, step=0.1
+    ),
+    # Tope en 0.9, no en 1.0 a proposito: en panico total (sin ningun
+    # momento de lucidez) la simulacion puede no terminar nunca, porque
+    # un par de peatones pueden quedar persiguiendose mutuamente para
+    # siempre en vez de cruzar la salida. Ver Peaton.decidir_movimiento.
+    "probabilidad_panico": Slider(
+        "Probabilidad de pánico (manada)", value=0.0, min=0.0, max=0.9, step=0.1
     ),
 }
 

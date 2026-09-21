@@ -21,6 +21,11 @@ Si `seguir_un_peaton` está activo (default), el primer peatón creado
 queda marcado como `seguido` y el modelo le va agregando cada celda por
 la que pasa a `peaton.historial`, para poder dibujar su recorrido en la
 visualización.
+
+`probabilidad_panico` es la probabilidad de que, en un paso dado,
+cualquier peatón siga a la manada en vez de al floor field (ver
+Peaton.decidir_movimiento en agent.py) — se sortea de nuevo en cada
+paso, para cada peatón, no es una etiqueta fija.
 """
 
 from mesa import Model
@@ -43,6 +48,7 @@ class EvacuacionModel(Model):
         probabilidad_friccion=0.0,
         tipo_vecindad="von_neumann",
         seguir_un_peaton=True,
+        probabilidad_panico=0.0,
     ):
         super().__init__(rng=rng)
 
@@ -51,6 +57,7 @@ class EvacuacionModel(Model):
         )
         self.pasos_transcurridos = 0
         self.probabilidad_friccion = probabilidad_friccion
+        self.probabilidad_panico = probabilidad_panico
         self.peaton_seguido = None
 
         self.datacollector = DataCollector(

@@ -25,11 +25,31 @@ un conflicto con otro peatón que quiere esa misma celda lateral.
 Un peatón `seguido` guarda en `historial` cada celda por la que pasó (el
 modelo se encarga de agregarla cuando lo mueve), para poder dibujar su
 recorrido completo en la visualización.
+
+Con probabilidad `probabilidad_panico` (parámetro del modelo, no del
+peatón), en un paso dado un peatón no piensa por sí mismo: en vez de
+seguir el floor field, mira quién tiene cerca (radio
+`RADIO_DE_PERCEPCION_DE_MANADA`) y se mueve hacia el centro de esa
+multitud — imita a la manada, aunque eso signifique ignorar una salida
+más cercana y vacía. Si no hay nadie cerca, no tiene manada que seguir y
+decide racionalmente como cualquiera. Es el mecanismo de "herding" que
+motiva el nivel ambicioso del TP.
+
+Ojo con esto, porque no es un detalle menor: el pánico se sortea de
+nuevo en CADA paso, para cada peatón — no es una etiqueta fija ("este
+peatón es panicoso para siempre"). La primera version que probamos
+hacia justamente eso, y un par de peatones panicosos cerca de una
+salida terminaban persiguiendose mutuamente en un circulo infinito, sin
+cruzar nunca: como ninguno de los dos "se le pasaba el panico", no
+habia forma de que la simulacion terminara. Sorteándolo paso a paso, en
+algun momento alguno de los dos actua racionalmente y rompe el ciclo.
 """
 
 from mesa.discrete_space import CellAgent
 
 from src.space import distancia_a_salida, es_muro, es_salida
+
+RADIO_DE_PERCEPCION_DE_MANADA = 3
 
 
 class Peaton(CellAgent):
@@ -72,6 +92,11 @@ class Peaton(CellAgent):
         if not candidatas_libres:
             return None, hay_progreso_posible
 
+        if self.model.random.random() < self.model.probabilidad_panico:
+            celda_hacia_la_manada = self._elegir_celda_siguiendo_a_la_manada(candidatas_libres)
+            if celda_hacia_la_manada is not None:
+                return celda_hacia_la_manada, hay_progreso_posible
+
         mejor_distancia_libre = min(distancia_a_salida(c) for c in candidatas_libres)
         if mejor_distancia_libre >= distancia_actual:
             if self.agresivo:
@@ -85,3 +110,30 @@ class Peaton(CellAgent):
             c for c in candidatas_libres if distancia_a_salida(c) == mejor_distancia_libre
         ]
         return self.model.random.choice(mejores), hay_progreso_posible
+
+    def _elegir_celda_siguiendo_a_la_manada(self, candidatas_libres):
+        """De las candidatas libres, la que mas acerca al centro de la
+        multitud cercana (no necesariamente a la salida). Devuelve None si
+        no hay nadie mas dentro del radio de percepcion."""
+        otros_peatones_cerca = [
+            celda.coordinate
+            for celda in self.cell.get_neighborhood(radius=RADIO_DE_PERCEPCION_DE_MANADA)
+            for agente in celda.agents
+            if agente is not self and not agente.evacuado
+        ]
+        if not otros_peatones_cerca:
+            return None
+
+        centro_x = sum(x for x, _ in otros_peatones_cerca) / len(otros_peatones_cerca)
+        centro_y = sum(y for _, y in otros_peatones_cerca) / len(otros_peatones_cerca)
+
+        def distancia_al_centro_de_la_manada(celda):
+            x, y = celda.coordinate
+            return (x - centro_x) ** 2 + (y - centro_y) ** 2
+
+        mejor_distancia = min(distancia_al_centro_de_la_manada(c) for c in candidatas_libres)
+        mejores = [
+            c for c in candidatas_libres
+            if distancia_al_centro_de_la_manada(c) == mejor_distancia
+        ]
+        return self.model.random.choice(mejores)

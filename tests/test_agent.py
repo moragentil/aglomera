@@ -8,8 +8,17 @@ def _celdas_por_coordenada(espacio):
     return {celda.coordinate: celda for celda in espacio.all_cells}
 
 
+def _model_de_prueba(rng=1, probabilidad_panico=0.0):
+    # Peaton.decidir_movimiento espera un modelo con estos dos atributos
+    # (que en EvacuacionModel siempre existen); en estos tests unitarios
+    # usamos un Model de Mesa pelado, asi que hay que agregarlos a mano.
+    model = Model(rng=rng)
+    model.probabilidad_panico = probabilidad_panico
+    return model
+
+
 def test_decidir_movimiento_elige_la_celda_mas_cercana_a_la_salida():
-    model = Model(rng=1)
+    model = _model_de_prueba()
     espacio = crear_espacio(5, 1, salidas=[(0, 0)], random=model.random)
     celdas = _celdas_por_coordenada(espacio)
 
@@ -21,7 +30,7 @@ def test_decidir_movimiento_elige_la_celda_mas_cercana_a_la_salida():
 
 
 def test_decidir_movimiento_no_elige_una_celda_ocupada():
-    model = Model(rng=1)
+    model = _model_de_prueba()
     espacio = crear_espacio(5, 1, salidas=[(0, 0)], random=model.random)
     celdas = _celdas_por_coordenada(espacio)
 
@@ -36,7 +45,7 @@ def test_decidir_movimiento_no_elige_una_celda_ocupada():
 
 
 def test_decidir_movimiento_no_hay_progreso_posible_detras_de_un_muro_completo():
-    model = Model(rng=1)
+    model = _model_de_prueba()
     # muro completo en x=2: todo lo que queda detras es inalcanzable
     espacio = crear_espacio(5, 1, salidas=[(0, 0)], muros=[(2, 0)], random=model.random)
     celdas = _celdas_por_coordenada(espacio)
@@ -50,7 +59,7 @@ def test_decidir_movimiento_no_hay_progreso_posible_detras_de_un_muro_completo()
 
 
 def test_peaton_paciente_no_elige_moverse_si_no_hay_mejora_disponible():
-    model = Model(rng=1)
+    model = _model_de_prueba()
     # sala 3x3, salida a la izquierda-medio. El peaton en (2, 1) tiene su
     # mejor vecina, (1, 1), ocupada por el bloqueador. Sus otras vecinas,
     # (2, 0) y (2, 2), no lo acercan a la salida pero estan libres.
@@ -66,7 +75,7 @@ def test_peaton_paciente_no_elige_moverse_si_no_hay_mejora_disponible():
 
 
 def test_peaton_agresivo_elige_una_celda_libre_aunque_no_mejore():
-    model = Model(rng=1)
+    model = _model_de_prueba()
     espacio = crear_espacio(3, 3, salidas=[(0, 1)], random=model.random)
     celdas = _celdas_por_coordenada(espacio)
 
@@ -79,8 +88,53 @@ def test_peaton_agresivo_elige_una_celda_libre_aunque_no_mejore():
     assert hay_progreso_posible
 
 
+def test_con_probabilidad_de_panico_total_se_sigue_a_la_manada():
+    model = _model_de_prueba(probabilidad_panico=1.0)
+    # sala 5x3, salida a la izquierda-medio. Racionalmente, el peaton en
+    # (2, 1) deberia ir a (1, 1) (lo acerca a la salida). Pero hay una
+    # "manada" de otros dos peatones parados mas hacia la derecha, y en
+    # panico va a preferir acercarse a ellos: (3, 1).
+    espacio = crear_espacio(5, 3, salidas=[(0, 1)], random=model.random)
+    celdas = _celdas_por_coordenada(espacio)
+
+    Peaton(model, celdas[(4, 0)])  # manada
+    Peaton(model, celdas[(4, 2)])  # manada
+    peaton = Peaton(model, celdas[(2, 1)])
+
+    celda_deseada, hay_progreso_posible = peaton.decidir_movimiento()
+
+    assert celda_deseada.coordinate == (3, 1)
+    assert hay_progreso_posible  # (1, 1) seguia estando disponible
+
+
+def test_sin_probabilidad_de_panico_decide_racionalmente_pese_a_tener_manada_cerca():
+    model = _model_de_prueba(probabilidad_panico=0.0)
+    espacio = crear_espacio(5, 3, salidas=[(0, 1)], random=model.random)
+    celdas = _celdas_por_coordenada(espacio)
+
+    Peaton(model, celdas[(4, 0)])  # manada, pero no importa: no hay panico
+    Peaton(model, celdas[(4, 2)])
+    peaton = Peaton(model, celdas[(2, 1)])
+
+    celda_deseada, _ = peaton.decidir_movimiento()
+
+    assert celda_deseada.coordinate == (1, 1)
+
+
+def test_con_panico_pero_sin_manada_cerca_decide_racionalmente():
+    model = _model_de_prueba(probabilidad_panico=1.0)
+    espacio = crear_espacio(5, 3, salidas=[(0, 1)], random=model.random)
+    celdas = _celdas_por_coordenada(espacio)
+
+    solo = Peaton(model, celdas[(2, 1)])
+    celda_deseada, _ = solo.decidir_movimiento()
+
+    # sin nadie cerca no hay manada que seguir: se comporta racionalmente
+    assert celda_deseada.coordinate == (1, 1)
+
+
 def test_el_peaton_se_evacua_si_esta_parado_en_una_salida():
-    model = Model(rng=1)
+    model = _model_de_prueba()
     espacio = crear_espacio(5, 1, salidas=[(0, 0)], random=model.random)
     celdas = _celdas_por_coordenada(espacio)
 
@@ -95,7 +149,7 @@ def test_el_peaton_se_evacua_si_esta_parado_en_una_salida():
 
 
 def test_el_peaton_evacuado_no_decide_moverse_ni_se_reevacua():
-    model = Model(rng=1)
+    model = _model_de_prueba()
     espacio = crear_espacio(5, 1, salidas=[(0, 0)], random=model.random)
     celdas = _celdas_por_coordenada(espacio)
 

@@ -48,6 +48,30 @@ def test_seguir_un_peaton_false_no_marca_a_nadie():
     assert all(not peaton.seguido for peaton in model.agents)
 
 
+def test_con_panico_intermedio_igual_termina_evacuando_a_todos():
+    # regresion: la primera version del panico era una etiqueta fija por
+    # peaton, y un par de peatones panicosos cerca de una salida quedaban
+    # persiguiendose en un circulo infinito sin cruzar nunca. Sortear el
+    # panico de nuevo en cada paso (no una vez al crear al peaton) evita
+    # que quede alguien atrapado para siempre.
+    model = EvacuacionModel(
+        ancho=20,
+        alto=11,
+        num_agentes=40,
+        salidas=[(0, 5), (19, 5)],
+        rng=1,
+        probabilidad_panico=0.5,
+        seguir_un_peaton=False,
+    )
+
+    for _ in range(500):
+        if model.todos_evacuaron():
+            break
+        model.step()
+
+    assert model.todos_evacuaron()
+
+
 def test_step_avanza_el_contador_de_pasos_y_mueve_agentes():
     model = EvacuacionModel(ancho=5, alto=1, num_agentes=1, salidas=[(0, 0)], rng=1)
     peaton = next(iter(model.agents))
