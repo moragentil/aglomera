@@ -69,9 +69,8 @@ El `DataCollector` ya registra por paso `evacuados`, `restantes` y
 Un script chico podría recorrer una corrida y publicar esos eventos a un
 broker local (por ejemplo Mosquitto), y otro proceso consumirlos y
 graficarlos. Eso alcanzaría para mostrar el flujo completo
-sensor, mensajería, ingesta y visualización sin comprar nada. Para que existan
-conteos *por salida* hace falta la métrica de "qué salida usó cada peatón",
-que figura como pendiente en el tablero del proyecto.
+sensor, mensajería, ingesta y visualización sin comprar nada. Los conteos *por salida* ya
+existen: el modelo registra una columna `evacuados_salida_X_Y` por cada salida.
 
 ## 5. Límites y cuidados
 

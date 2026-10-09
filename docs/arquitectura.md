@@ -94,19 +94,21 @@ flowchart TD
 | `bloqueado` | Si quería avanzar y no pudo (lo fija el modelo) |
 | `agresivo` | Si se desvía en vez de esperar |
 | `seguido` e `historial` | Si se le dibuja el recorrido, y las celdas por las que pasó |
+| `salida_usada` | Coordenada de la salida por la que se fue (`None` mientras no evacúa) |
 
 **En el modelo:** `espacio`, `probabilidad_friccion`, `probabilidad_panico`,
 `pasos_transcurridos` y `peaton_seguido`. El `DataCollector` registra
-`evacuados`, `restantes` y `bloqueados` en cada paso.
+`evacuados`, `restantes`, `bloqueados` y una columna `evacuados_salida_X_Y` por
+cada salida, en cada paso.
 
 ## 5. Flujo de datos del análisis (Big Data)
 
 ```mermaid
 flowchart LR
-    P["PARAMETROS<br/>combinaciones y semillas"] --> BR["mesa.batch_run"]
+    P["EXPERIMENTOS<br/>combinaciones y semillas"] --> BR["mesa.batch_run"]
     BR --> S["Una simulación por<br/>combinación y semilla"]
     S --> DC["DataCollector<br/>una fila por paso"]
-    DC --> CSV[("batch_FECHA.csv")]
+    DC --> CSV[("batch_NOMBRE_FECHA.csv")]
     CSV --> NB["Notebook con Pandas<br/>resumen, tablas y gráficos"]
 ```
 

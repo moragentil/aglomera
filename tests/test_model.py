@@ -188,6 +188,35 @@ def test_conflicto_con_friccion_total_no_deja_pasar_a_nadie():
     assert peaton_b.bloqueado
 
 
+def test_el_datacollector_cuenta_los_evacuados_por_cada_salida():
+    # pasillo con una salida en cada punta. Un peaton esta cerca de cada una,
+    # asi que cada salida tiene que registrar exactamente uno (si las
+    # columnas se pisaran entre si, las dos mostrarian el mismo numero).
+    model = EvacuacionModel(
+        ancho=5, alto=1, num_agentes=2, salidas=[(0, 0), (4, 0)], rng=1,
+        seguir_un_peaton=False,
+    )
+    celdas = {c.coordinate: c for c in model.espacio.all_cells}
+    peaton_a, peaton_b = model.agents
+    peaton_a.cell = None
+    peaton_b.cell = None
+    peaton_a.cell = celdas[(1, 0)]
+    peaton_b.cell = celdas[(3, 0)]
+
+    for _ in range(10):
+        if model.todos_evacuaron():
+            break
+        model.step()
+
+    df = model.datacollector.get_model_vars_dataframe()
+    assert df["evacuados_salida_0_0"].iloc[-1] == 1
+    assert df["evacuados_salida_4_0"].iloc[-1] == 1
+    assert (
+        df["evacuados_salida_0_0"].iloc[-1] + df["evacuados_salida_4_0"].iloc[-1]
+        == df["evacuados"].iloc[-1]
+    )
+
+
 def test_el_datacollector_registra_evacuados_crecientes_por_paso():
     model = EvacuacionModel(ancho=5, alto=1, num_agentes=3, salidas=[(0, 0)], rng=1)
 

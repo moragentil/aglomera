@@ -60,13 +60,19 @@ class EvacuacionModel(Model):
         self.probabilidad_panico = probabilidad_panico
         self.peaton_seguido = None
 
-        self.datacollector = DataCollector(
-            model_reporters={
-                "evacuados": lambda m: m.cantidad_evacuados(),
-                "restantes": lambda m: m.cantidad_restantes(),
-                "bloqueados": lambda m: m.cantidad_bloqueados(),
-            }
-        )
+        reportes = {
+            "evacuados": lambda m: m.cantidad_evacuados(),
+            "restantes": lambda m: m.cantidad_restantes(),
+            "bloqueados": lambda m: m.cantidad_bloqueados(),
+        }
+        # una columna por salida (evacuados_salida_X_Y). El "s=salida" en la
+        # lambda es a proposito: sin eso, todas las lambdas mirarian la
+        # ultima salida del ciclo.
+        for x, y in salidas:
+            reportes[f"evacuados_salida_{x}_{y}"] = (
+                lambda m, s=(x, y): m.cantidad_evacuados_por_salida(s)
+            )
+        self.datacollector = DataCollector(model_reporters=reportes)
 
         for i, celda in enumerate(self._elegir_celdas_iniciales(num_agentes)):
             agresivo = self.random.random() < probabilidad_agresivo
@@ -92,6 +98,9 @@ class EvacuacionModel(Model):
 
     def cantidad_evacuados(self):
         return sum(1 for peaton in self.agents if peaton.evacuado)
+
+    def cantidad_evacuados_por_salida(self, salida):
+        return sum(1 for peaton in self.agents if peaton.salida_usada == salida)
 
     def cantidad_restantes(self):
         return len(self.agents) - self.cantidad_evacuados()

@@ -84,18 +84,25 @@ imágenes de los gráficos del notebook.
 ## 5. Resultados (Monte Carlo)
 
 Repetir cada escenario con 10 o más semillas distintas muestra qué tan estable
-es el resultado (el desvío), no una corrida con suerte.
+es el resultado (el desvío), no una corrida con suerte. Todo se regenera con
+`venv/bin/python experiments/run_batch.py` (unos segundos) y se analiza en
+`notebooks/analisis_resultados.ipynb`.
 
 - **Dos salidas evacúan mucho más rápido que una**, y la ventaja crece con la
-  cantidad de gente. Con 90 agentes: 128.3 pasos con una salida contra 76.4
-  con dos. El desvío fue de 3 a 4 pasos, así que la diferencia es real.
-- **La fricción empeora todo, de forma sostenida.** Con 100 agentes: 145 pasos
-  sin fricción, 174 con 0.3 y 237 con 0.6.
+  cantidad de gente. Con 90 agentes: 104.9 pasos con una salida contra 62.3
+  con dos. El desvío fue de 1 a 4 pasos, así que la diferencia es real.
+- **La fricción empeora todo, de forma sostenida.** Con 100 agentes: 144 pasos
+  sin fricción, 176 con 0.3 y 243 con 0.6.
 - **El pánico empeora la evacuación de forma pronunciada.** Con dos salidas y
-  80 agentes: 50 pasos sin pánico, 63 con 0.4 y 229 con 0.8.
+  80 agentes: 50 pasos sin pánico, 63 con 0.4 y 229 con 0.8. Con pánico total
+  (1.0) ninguna corrida termina y solo ~7 de 80 personas logran salir.
+- **El pánico no desbalancea las salidas.** La gente se reparte casi parejo
+  entre las dos (unos 39 y 41 de 80) con cualquier nivel de pánico: la
+  evacuación se enlentece porque se pierde tiempo siguiendo a otros, no
+  porque todos se amontonen en una sola salida.
 - **Las diagonales aceleran el tránsito pero no la puerta.** Con Moore la
-  evacuación fue ~24% más rápida (110.5 contra 145.0 pasos), pero la
-  congestión máxima en la puerta no bajó.
+  evacuación fue ~22% más rápida (113.0 contra 144.1 pasos), pero la
+  congestión máxima en la puerta no bajó (88 contra 86 bloqueados a la vez).
 
 Mostrar los dos gráficos del notebook (barras y curva de evacuación).
 

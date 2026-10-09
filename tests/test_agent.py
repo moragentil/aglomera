@@ -140,10 +140,12 @@ def test_el_peaton_se_evacua_si_esta_parado_en_una_salida():
 
     peaton = Peaton(model, celdas[(0, 0)])
     assert not peaton.evacuado
+    assert peaton.salida_usada is None
 
     peaton.evacuar_si_llego()
 
     assert peaton.evacuado
+    assert peaton.salida_usada == (0, 0)  # recuerda por cual salida se fue
     assert peaton.cell is None
     assert celdas[(0, 0)].is_empty  # la salida queda libre para otro peaton
 

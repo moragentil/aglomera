@@ -29,8 +29,10 @@ se empuja, se desvía o entra en pánico.
 - Vecindad configurable: 4 direcciones (`von_neumann`) u 8 con diagonales
   (`moore`).
 - Visualización interactiva con sliders, y seguimiento visual de un peatón.
-- Corridas batch tipo Monte Carlo y un notebook de análisis.
-- 28 tests automáticos.
+- Cuatro experimentos Monte Carlo reproducibles con un comando y un notebook
+  que los analiza.
+- Métrica de cuánta gente usó cada salida.
+- 32 tests automáticos.
 
 ## Documentación
 
@@ -80,14 +82,21 @@ peatones, agresividad, fricción y pánico).
 venv/bin/python -m pytest tests/ -q
 ```
 
-**Corridas Monte Carlo** (guarda un CSV en `data/results/`, que no se versiona):
+**Corridas Monte Carlo.** Cada comparación de la sección de resultados es un
+experimento con nombre. Guardan un CSV por experimento en `data/results/`
+(que no se versiona) y tardan unos segundos en total:
 
 ```bash
-venv/bin/python experiments/run_batch.py
+venv/bin/python experiments/run_batch.py --listar    # ver los experimentos
+venv/bin/python experiments/run_batch.py panico      # correr uno
+venv/bin/python experiments/run_batch.py             # correr todos
 ```
 
+Los experimentos son `salidas`, `friccion`, `vecindad` y `panico`, y se
+definen en `EXPERIMENTOS` dentro de `experiments/run_batch.py`.
+
 **Análisis:** abrir `notebooks/analisis_resultados.ipynb`. Lee el CSV más
-reciente de `data/results/`.
+reciente de cada experimento, así que hay que correr el batch antes.
 
 ## Estructura del repositorio
 
@@ -98,9 +107,9 @@ src/
   agent.py              Peaton: reglas de decisión de movimiento
   model.py              EvacuacionModel: orquesta el paso y registra métricas
   visualization.py      Dibujo de la grilla con matplotlib para Solara
-experiments/run_batch.py  Corridas batch (Monte Carlo) a CSV
+experiments/run_batch.py  Experimentos Monte Carlo con nombre, a CSV
 notebooks/              Análisis de resultados con Pandas
-tests/                  Tests de space, agent y model
+tests/                  Tests de space, agent, model y experimentos
 docs/marco_teorico.md   Marco teórico y decisiones de modelado
 dashboard/              Reservado para un dashboard Streamlit (vacío)
 data/results/           CSV generados (ignorado por git)
@@ -159,8 +168,9 @@ un conflicto). Si simplemente no hay adónde mejorar, no cuenta como bloqueado.
 | `tipo_vecindad` | `"von_neumann"` | `"von_neumann"` (4 direcciones) o `"moore"` (8) |
 | `seguir_un_peaton` | `True` | Marca al primer peatón y guarda su recorrido |
 
-Métricas registradas por paso (`DataCollector`): `evacuados`, `restantes` y
-`bloqueados`.
+Métricas registradas por paso (`DataCollector`): `evacuados`, `restantes`,
+`bloqueados` y una columna `evacuados_salida_X_Y` por cada salida (cuánta gente
+salió por esa coordenada).
 
 ## Escenario del visualizador
 
@@ -173,15 +183,26 @@ pánico total la simulación puede no terminar nunca (ver abajo).
 
 ## Resultados obtenidos hasta ahora
 
-Pasos promedio hasta evacuar a todos. Son corridas con semillas fijas; los
-números exactos dependen de la configuración indicada.
+Pasos promedio hasta evacuar a todos. Todo sale de los experimentos de
+`experiments/run_batch.py` (el nombre de cada uno está entre paréntesis), con
+semillas fijas, así que se puede regenerar tal cual.
 
 | Experimento | Resultado |
 |---|---|
-| 1 salida central vs 2 en los extremos (sala 20x15, 10 semillas) | Con 30/60/90 agentes: 48.9/87.8/128.3 pasos con 1 salida y 32.4/54.9/76.4 con 2 |
-| Fricción (sala con puerta, 100 agentes, 15 semillas) | 0.0: 145.0, 0.3: 174.1, 0.6: 237.5 pasos |
-| Vecindad (misma sala, 100 agentes, 15 semillas) | `moore` evacúa ~24% más rápido (110.5 vs 145.0), pero la congestión máxima en la puerta no baja (88.7 vs 86.1 bloqueados a la vez) |
-| Pánico (2 salidas, 80 agentes, 20 semillas) | 0.0: 50.1, 0.4: 63.0, 0.8: 229.2 pasos. Con 1.0 la simulación no termina en 20 de 20 corridas |
+| 1 salida central vs 2 en los extremos (`salidas`: sala 20x15, 10 semillas) | Con 30/60/90 agentes: 40.9/74.2/104.9 pasos con 1 salida y 28.1/45.5/62.3 con 2. La ventaja crece con la gente |
+| Fricción (`friccion`: sala con puerta, 100 agentes, 15 semillas) | 0.0: 144.1, 0.3: 176.0, 0.6: 243.2 pasos. También sube la congestión máxima (86.1, 90.5 y 92.7 bloqueados a la vez) |
+| Vecindad (`vecindad`: misma sala, 100 agentes, 15 semillas) | `moore` evacúa ~22% más rápido (113.0 vs 144.1), pero la congestión máxima en la puerta no baja (88.1 vs 86.1 bloqueados a la vez) |
+| Pánico (`panico`: 2 salidas, 80 agentes, 20 semillas) | 0.0: 50.1, 0.4: 63.0, 0.8: 229.2 pasos. Con 1.0 ninguna de las 20 corridas termina y en promedio solo ~7 de 80 personas llegan a salir |
+
+Dos cosas que muestran las corridas y que no eran obvias:
+
+- El pánico **no desbalancea** el uso de las salidas: con 0.0 y con 0.8 la
+  gente se reparte casi parejo entre las dos (unos 39 y 41 de 80). La
+  evacuación empeora porque la gente pierde tiempo siguiendo a otros, no
+  porque se amontone en una sola salida.
+- Los números de la fila de salidas son distintos a los de versiones
+  anteriores de este documento, porque esas se midieron antes de pasar a la
+  activación sincrónica. La conclusión no cambia.
 
 Resultados negativos que vale la pena conocer:
 
@@ -197,18 +218,16 @@ Resultados negativos que vale la pena conocer:
   escala en metros ni en segundos.
 - El floor field es estático (solo distancia), no tiene en cuenta a la gente.
 - El recinto está fijo en `app.py`; todavía no se puede cargar un plano.
-- `experiments/run_batch.py` solo compara salidas y cantidad de agentes; las
-  comparaciones de fricción, pánico y vecindad se hicieron con scripts sueltos
-  que no están en el repo.
-- No hay tests de `src/visualization.py` ni de `experiments/run_batch.py`.
+- Los experimentos no incluyen la agresividad, y la combinación de agresividad
+  con fricción no se estudió de forma sistemática.
+- No hay tests de `src/visualization.py`.
 - IoT y el dashboard de Streamlit no están implementados.
 
 ## Próximos pasos
 
 1. Definir el recinto desde un archivo (formato de texto o JSON), con editor
    visual y, como opcional, importar un plano como imagen.
-2. Registrar qué salida usó cada peatón y ampliar `run_batch.py` y el notebook.
-3. Escenario de dos salidas en el visualizador para mostrar el pánico en vivo.
+2. Escenario de dos salidas en el visualizador para mostrar el pánico en vivo.
 
 ## Flujo de trabajo
 

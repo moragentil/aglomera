@@ -61,11 +61,16 @@ class Peaton(CellAgent):
         self.agresivo = agresivo
         self.seguido = seguido
         self.historial = [cell.coordinate] if seguido else []
+        self.salida_usada = None
 
     def evacuar_si_llego(self):
-        """Si esta parado en una celda de salida, evacua y la libera."""
+        """Si esta parado en una celda de salida, evacua y la libera.
+
+        Guarda en salida_usada la coordenada de esa salida, para poder medir
+        cuanta gente uso cada una."""
         if not self.evacuado and es_salida(self.cell):
             self.evacuado = True
+            self.salida_usada = self.cell.coordinate
             self.cell = None
             self.bloqueado = False
 
