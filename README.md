@@ -32,7 +32,15 @@ se empuja, se desvía o entra en pánico.
 - Corridas batch tipo Monte Carlo y un notebook de análisis.
 - 28 tests automáticos.
 
-La teoría de fondo está en [docs/marco_teorico.md](docs/marco_teorico.md).
+## Documentación
+
+- [docs/marco_teorico.md](docs/marco_teorico.md): la teoría de fondo y las
+  decisiones de modelado.
+- [docs/arquitectura.md](docs/arquitectura.md): diagramas de los módulos, del
+  paso de la simulación y de la decisión de un peatón.
+- [docs/iot.md](docs/iot.md): propuesta de extensión con IoT (no implementada).
+- [docs/guion_defensa.md](docs/guion_defensa.md): borrador del guion de la
+  defensa, con la demo y las preguntas probables.
 
 ## Stack
 
