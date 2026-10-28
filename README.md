@@ -36,6 +36,8 @@ se empuja, se desvía o entra en pánico.
 
 ## Documentación
 
+- [docs/informe_fase1.md](docs/informe_fase1.md): informe de la Fase 1
+  (entrega parcial), con capturas, resultados y lo que sigue.
 - [docs/marco_teorico.md](docs/marco_teorico.md): la teoría de fondo y las
   decisiones de modelado.
 - [docs/arquitectura.md](docs/arquitectura.md): diagramas de los módulos, del
