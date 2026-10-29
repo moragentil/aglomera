@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aglomera · Simulador de evacuación</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230ea5e9'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='20' font-weight='700' text-anchor='middle' fill='%2300344d'%3EA%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="vendor/fuentes.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <!-- Tailwind y las fuentes estan en vendor/: la app funciona sin conexion -->
+  <script src="vendor/tailwind.js"></script>
+  <script>
+    // la paleta sale del sistema de diseno ("Aglomera Telemetry System")
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            surface: "#0f131c",
+            "surface-container-lowest": "#0a0e16",
+            "surface-container-low": "#181c24",
+            "surface-container": "#1c2028",
+            "surface-container-high": "#262a33",
+            "surface-container-highest": "#31353e",
+            "on-surface": "#dfe2ee",
+            "on-surface-variant": "#bec8d2",
+            outline: "#88929b",
+            "outline-variant": "#3e4850",
+            primary: "#89ceff",
+            "primary-container": "#0ea5e9",
+            secondary: "#4edea3",
+            "secondary-container": "#00a572",
+            tertiary: "#ffb3ad",
+            error: "#ffb4ab",
+            "error-container": "#93000a",
+            agente: "#3b82f6",
+            bloqueo: "#ef4444",
+            seguido: "#a855f7",
+          },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+            mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+          },
+        },
+      },
+    };
+  </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .etiqueta { @apply font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-on-surface-variant; }
+      .tarjeta { @apply rounded-lg border border-outline-variant/40 bg-surface-container-low; }
+      .btn { @apply inline-flex items-center justify-center gap-2 rounded px-3 py-2 text-xs font-semibold border border-outline-variant/60 bg-surface-container-high text-on-surface transition-colors hover:border-primary-container disabled:opacity-40 disabled:pointer-events-none; }
+      .btn-primario { @apply inline-flex items-center justify-center gap-2 rounded px-3 py-2 text-xs font-semibold border border-primary-container bg-primary-container text-[#082f49] transition-colors hover:bg-[#38bdf8] disabled:opacity-40 disabled:pointer-events-none; }
+      .btn-activo { @apply border-primary-container text-primary bg-surface-container-highest; }
+      .entrada { @apply w-full rounded border border-outline-variant/60 bg-surface-container-lowest px-3 py-2 font-mono text-xs text-on-surface focus:outline-none focus:border-primary-container; }
+      .valor { @apply font-mono tabular-nums; }
+    }
+  </style>
+</head>
+<body class="bg-surface font-sans text-on-surface antialiased">
+  <header class="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-outline-variant/40 bg-surface-container-lowest/95 px-5 backdrop-blur">
+    <div class="flex items-center gap-8">
+      <div class="flex items-center gap-2">
+        <div class="flex h-6 w-6 items-center justify-center rounded bg-primary-container text-sm font-bold text-[#00344d]">A</div>
+        <span class="text-lg font-semibold tracking-tight">AGLOMERA</span>
+      </div>
+      <nav class="flex h-14 items-stretch" id="navegacion">
+        <a href="#diseno" data-vista="diseno" class="nav-pestana">1. DISEÑO</a>
+        <a href="#simular" data-vista="simular" class="nav-pestana">2. SIMULAR</a>
+        <a href="#comparar" data-vista="comparar" class="nav-pestana">3. COMPARAR</a>
+      </nav>
+    </div>
+    <div class="flex items-center gap-2 rounded border border-outline-variant/40 bg-surface-container-low px-3 py-1 font-mono text-[11px]">
+      <span class="text-on-surface-variant">DISEÑO ACTUAL</span>
+      <span id="chip-diseno" class="font-medium text-primary">—</span>
+    </div>
+  </header>
+
+  <main class="pt-14">
+    <section id="vista-diseno" class="vista" hidden></section>
+    <section id="vista-simular" class="vista" hidden></section>
+    <section id="vista-comparar" class="vista" hidden></section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
