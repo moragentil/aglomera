@@ -15,6 +15,9 @@ flowchart LR
     agent --> space
     viz --> space
     batch["experiments/run_batch.py"] --> model
+    batch --> recinto
+    recinto --> planos[("recintos/*.txt y *.png")]
+    recinto --> rimg["src/recinto_imagen.py"]
     batch --> csv[("data/results/*.csv")]
     csv --> nb["notebooks/analisis_resultados.ipynb"]
 ```
@@ -22,6 +25,8 @@ flowchart LR
 | Módulo | Responsabilidad |
 |---|---|
 | `space.py` | El mapa: grilla, salidas, muros y floor field. No sabe nada de peatones. |
+| `recinto.py` | Lee un plano de texto (`recintos/*.txt`) y lo traduce a ancho, alto, salidas y muros. No sabe nada del modelo. |
+| `recinto_imagen.py` | Lo mismo desde una imagen dibujada (negro pared, verde salida), con procesamiento de imagen clásico. Termina en el mismo `Recinto`. |
 | `agent.py` | Un peatón: decide a qué celda querría moverse. No mueve a nadie. |
 | `model.py` | Crea todo, ejecuta cada paso, resuelve conflictos y registra métricas. |
 | `visualization.py` | Dibuja el estado actual del modelo. Solo lo lee. |
@@ -120,6 +125,9 @@ configuraciones.
 
 | Quiero... | Toco... |
 |---|---|
+| Un recinto nuevo | Un archivo `.txt` en `recintos/` (sin tocar código) |
+| Un recinto dibujado en una imagen | Un `.png` en `recintos/` y `AGLOMERA_ANCHO_CELDAS` |
+| Otra forma de definir el recinto (por ejemplo un editor) | Un módulo nuevo que produzca un `Recinto` |
 | Un nuevo tipo de celda (por ejemplo una zona lenta) | `space.py` |
 | Una nueva regla de movimiento o comportamiento | `agent.py` (`decidir_movimiento`) |
 | Cambiar cómo se resuelven los conflictos o agregar una métrica | `model.py` |

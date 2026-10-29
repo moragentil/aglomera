@@ -20,6 +20,8 @@ se empuja, se desvía o entra en pánico.
 
 - Recinto en grilla 2D con salidas y muros, y un *floor field* (mapa de
   distancia a la salida más cercana) calculado una sola vez.
+- Recintos definidos por el usuario: un plano de texto o una imagen dibujada
+  (negro pared, verde salida), en `recintos/`.
 - Peatones que avanzan hacia la salida y se bloquean entre sí, con una métrica
   de congestión (`bloqueados`).
 - Activación **sincrónica** con resolución explícita de conflictos y un
@@ -32,7 +34,7 @@ se empuja, se desvía o entra en pánico.
 - Cuatro experimentos Monte Carlo reproducibles con un comando y un notebook
   que los analiza.
 - Métrica de cuánta gente usó cada salida.
-- 32 tests automáticos.
+- 64 tests automáticos.
 
 ## Documentación
 
@@ -77,6 +79,50 @@ venv/bin/solara run app.py
 Controles: `STEP` avanza un paso, el botón de play corre hasta el final y
 `RESET` reinicia con los valores actuales de los sliders (cantidad de
 peatones, agresividad, fricción y pánico).
+
+**Elegir el recinto.** El plano se lee de un archivo de texto de la carpeta
+`recintos/`: un caracter por celda, `#` muro, `S` salida y `.` piso, y la
+primera línea del archivo es la fila de arriba. Hay dos de ejemplo
+(`sala_con_puerta`, el de por defecto, y `dos_salidas`). Para usar otro, o uno
+propio (por nombre o por ruta):
+
+```bash
+AGLOMERA_RECINTO=dos_salidas venv/bin/solara run app.py
+AGLOMERA_RECINTO=mi_plano.txt venv/bin/solara run app.py
+```
+
+Un plano inválido (caracter desconocido, filas de distinto largo, sin salida)
+falla con un mensaje que indica la línea y la columna del problema. Los
+peatones solo se ubican en celdas desde las que hay camino a una salida.
+
+**Recinto dibujado en una imagen.** También se puede dibujar el plano en
+cualquier programa (Paint, Preview, una foto de un dibujo) y usarlo directo.
+La convención de colores es: **negro = pared, verde = salida**, y cualquier
+otro color claro es piso. No usa inteligencia artificial: es procesamiento de
+imagen clásico, que achica el dibujo a una grilla y decide celda por celda.
+Hay que indicar cuántas celdas de ancho debe tener el recinto (el alto sale de
+las proporciones):
+
+```bash
+AGLOMERA_RECINTO=recintos/auditorio.png AGLOMERA_ANCHO_CELDAS=40 venv/bin/solara run app.py
+```
+
+Como el resultado depende del tamaño del dibujo y de cuántas celdas se pidan,
+conviene **revisar cómo se interpretó** antes de simular. Este comando
+imprime el plano de texto resultante, que se puede corregir a mano y guardar
+en `recintos/`:
+
+```bash
+venv/bin/python -m src.recinto_imagen recintos/auditorio.png --ancho 40
+venv/bin/python -m src.recinto_imagen mi_dibujo.png --ancho 50 --guardar recintos/mi_plano.txt
+```
+
+Limitaciones: una pared dibujada con un trazo grueso sale de 1 o 2 celdas de
+ancho según cómo caiga sobre la grilla, y una línea más fina que el grosor
+mínimo (`--grosor`, 2 píxeles por defecto) puede perderse. Distinguir puertas
+y paredes en el plano escaneado de un edificio real (con escala, ruido y
+símbolos) es otro problema, mucho más grande, y no está resuelto: las salidas
+siempre se marcan a mano en verde.
 
 **Tests:**
 

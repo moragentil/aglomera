@@ -32,7 +32,7 @@ from mesa import Model
 from mesa.datacollection import DataCollector
 
 from src.agent import Peaton
-from src.space import crear_espacio, es_muro, es_salida
+from src.space import crear_espacio, distancia_a_salida, es_muro, es_salida
 
 
 class EvacuacionModel(Model):
@@ -84,15 +84,20 @@ class EvacuacionModel(Model):
         self.datacollector.collect(self)
 
     def _elegir_celdas_iniciales(self, num_agentes):
+        # una celda encerrada (sin camino a ninguna salida) tiene distancia
+        # infinita: un peaton puesto ahi nunca podria evacuar. Con un plano
+        # dibujado por el usuario puede pasar, asi que no se las usa.
         disponibles = [
             celda
             for celda in self.espacio.all_cells
-            if not es_muro(celda) and not es_salida(celda)
+            if not es_muro(celda)
+            and not es_salida(celda)
+            and distancia_a_salida(celda) != float("inf")
         ]
         if num_agentes > len(disponibles):
             raise ValueError(
                 f"Pediste {num_agentes} agentes pero solo hay "
-                f"{len(disponibles)} celdas transitables disponibles."
+                f"{len(disponibles)} celdas transitables con camino a una salida."
             )
         return self.random.sample(disponibles, num_agentes)
 

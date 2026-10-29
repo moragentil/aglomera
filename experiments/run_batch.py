@@ -22,6 +22,7 @@ import pandas as pd  # noqa: E402
 from mesa import batch_run  # noqa: E402
 
 from src.model import EvacuacionModel  # noqa: E402
+from src.recinto import cargar_recinto  # noqa: E402
 
 # mesa.batch_run itera cualquier lista que le pases para
 # decidir qué "barrer". Si le pasaras salidas=[(19, 7)] tal cual, pensaría
@@ -32,22 +33,23 @@ from src.model import EvacuacionModel  # noqa: E402
 # así: [[]] = "un solo valor: la lista vacía". Los números y los textos
 # sueltos (ancho, tipo_vecindad) no necesitan el envoltorio.
 
+def parametros_de_recinto(nombre):
+    """Lee un plano de recintos/ y lo devuelve como parámetros de batch_run:
+    salidas y muros van envueltos en una lista extra (ver el comentario de arriba)."""
+    recinto = cargar_recinto(nombre)
+    return {
+        "ancho": recinto.ancho,
+        "alto": recinto.alto,
+        "salidas": [recinto.salidas],
+        "muros": [recinto.muros],
+    }
+
+
 # El escenario de app.py: sala partida por una pared con una puerta de una celda.
-ALTO_SALA_CON_PUERTA = 10
-SALA_CON_PUERTA = {
-    "ancho": 15,
-    "alto": ALTO_SALA_CON_PUERTA,
-    "salidas": [[(14, 5)]],
-    "muros": [[(7, y) for y in range(ALTO_SALA_CON_PUERTA) if y != 4]],
-}
+SALA_CON_PUERTA = parametros_de_recinto("sala_con_puerta")
 
 # Sala abierta con una salida en cada punta, para ver el efecto del pánico.
-SALA_CON_DOS_SALIDAS = {
-    "ancho": 20,
-    "alto": 11,
-    "salidas": [[(0, 5), (19, 5)]],
-    "muros": [[]],
-}
+SALA_CON_DOS_SALIDAS = parametros_de_recinto("dos_salidas")
 
 EXPERIMENTOS = {
     "salidas": {
