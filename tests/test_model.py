@@ -230,3 +230,54 @@ def test_el_datacollector_registra_evacuados_crecientes_por_paso():
     assert df["evacuados"].is_monotonic_increasing
     assert df["evacuados"].iloc[-1] == 3
     assert df["restantes"].iloc[-1] == 0
+
+
+def test_las_posiciones_iniciales_ubican_a_los_peatones_exactamente_ahi():
+    posiciones = [(1, 1), (2, 3), (0, 0)]
+
+    model = EvacuacionModel(
+        ancho=5, alto=5, num_agentes=999, salidas=[(4, 4)], posiciones_iniciales=posiciones, rng=1
+    )
+
+    assert sorted(p.cell.coordinate for p in model.agents) == sorted(posiciones)
+    assert len(model.agents) == 3  # num_agentes no se usa cuando hay posiciones
+
+
+def test_con_posiciones_iniciales_la_simulacion_sigue_siendo_reproducible_y_termina():
+    posiciones = [(0, 0), (1, 0), (2, 0), (0, 1)]
+    corridas = []
+    for _ in range(2):
+        model = EvacuacionModel(
+            ancho=5, alto=2, num_agentes=0, salidas=[(4, 0)], posiciones_iniciales=posiciones, rng=3
+        )
+        while model.running and model.pasos_transcurridos < 100:
+            model.step()
+        corridas.append((model.pasos_transcurridos, model.todos_evacuaron()))
+
+    assert corridas[0] == corridas[1] and corridas[0][1] is True
+
+
+@pytest.mark.parametrize(
+    "posiciones, fragmento",
+    [
+        ([(9, 9)], "fuera del recinto"),
+        ([(2, 2)], "no es una celda transitable"),  # un muro
+        ([(4, 4)], "no es una celda transitable"),  # la salida
+        ([(1, 1), (1, 1)], "repetidas"),
+    ],
+)
+def test_rechaza_posiciones_iniciales_que_no_sirven(posiciones, fragmento):
+    with pytest.raises(ValueError, match=fragmento):
+        EvacuacionModel(
+            ancho=5, alto=5, num_agentes=1, salidas=[(4, 4)], muros=[(2, 2)],
+            posiciones_iniciales=posiciones, rng=1,
+        )
+
+
+def test_rechaza_una_posicion_inicial_encerrada_sin_camino_a_la_salida():
+    # la columna del medio es un muro: la mitad derecha no tiene salida
+    with pytest.raises(ValueError, match="camino a una salida"):
+        EvacuacionModel(
+            ancho=5, alto=2, num_agentes=1, salidas=[(0, 0)], muros=[(2, 0), (2, 1)],
+            posiciones_iniciales=[(4, 0)], rng=1,
+        )

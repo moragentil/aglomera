@@ -49,6 +49,7 @@ class EvacuacionModel(Model):
         tipo_vecindad="von_neumann",
         seguir_un_peaton=True,
         probabilidad_panico=0.0,
+        posiciones_iniciales=None,
     ):
         super().__init__(rng=rng)
 
@@ -74,7 +75,15 @@ class EvacuacionModel(Model):
             )
         self.datacollector = DataCollector(model_reporters=reportes)
 
-        for i, celda in enumerate(self._elegir_celdas_iniciales(num_agentes)):
+        # por defecto los peatones se ubican al azar; con `posiciones_iniciales`
+        # (por ejemplo las que salen de un conteo de sensores por zona, ver
+        # src/zonas.py) se ubican exactamente ahi y `num_agentes` no se usa
+        if posiciones_iniciales is None:
+            celdas_iniciales = self._elegir_celdas_iniciales(num_agentes)
+        else:
+            celdas_iniciales = self._celdas_en(posiciones_iniciales)
+
+        for i, celda in enumerate(celdas_iniciales):
             agresivo = self.random.random() < probabilidad_agresivo
             seguido = seguir_un_peaton and i == 0
             peaton = Peaton(self, celda, agresivo=agresivo, seguido=seguido)
@@ -100,6 +109,26 @@ class EvacuacionModel(Model):
                 f"{len(disponibles)} celdas transitables con camino a una salida."
             )
         return self.random.sample(disponibles, num_agentes)
+
+    def _celdas_en(self, posiciones):
+        """Las celdas que corresponden a unas posiciones (x, y). Falla con
+        ValueError si alguna no sirve para ubicar a un peatón."""
+        celdas_por_coordenada = {celda.coordinate: celda for celda in self.espacio.all_cells}
+        posiciones = [tuple(posicion) for posicion in posiciones]
+        if len(set(posiciones)) != len(posiciones):
+            raise ValueError("Hay posiciones repetidas: una celda admite un solo peatón.")
+
+        celdas = []
+        for posicion in posiciones:
+            celda = celdas_por_coordenada.get(posicion)
+            if celda is None:
+                raise ValueError(f"La posición {posicion} está fuera del recinto.")
+            if es_muro(celda) or es_salida(celda) or distancia_a_salida(celda) == float("inf"):
+                raise ValueError(
+                    f"La posición {posicion} no es una celda transitable con camino a una salida."
+                )
+            celdas.append(celda)
+        return celdas
 
     def cantidad_evacuados(self):
         return sum(1 for peaton in self.agents if peaton.evacuado)
