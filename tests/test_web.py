@@ -280,6 +280,12 @@ def test_la_curva_promedio_mantiene_en_el_total_a_las_corridas_que_ya_terminaron
     assert curva["evacuados"] == [0.0, 1.5, 3.0, 3.5, 4.0]  # la rapida se queda en 4, no vuelve a 0
 
 
+def test_la_pantalla_pide_al_navegador_que_revalide_siempre(cliente):
+    # si no, tras un cambio el navegador puede seguir mostrando el JavaScript viejo
+    for ruta in ("/", "/js/main.js", "/css/app.css"):
+        assert cliente.get(ruta).headers["cache-control"] == "no-cache"
+
+
 def test_la_pantalla_se_sirve_en_la_raiz(cliente):
     respuesta = cliente.get("/")
 

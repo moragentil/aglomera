@@ -9,6 +9,7 @@ Todo lo que sale de acá usa "fila": 0 es la fila de arriba, igual que el
 """
 
 import math
+import random
 import statistics
 import threading
 from collections import OrderedDict
@@ -16,6 +17,7 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 from src.model import EvacuacionModel
+from src.space import crear_espacio, distancia_a_salida, es_muro, es_salida
 
 MAXIMO_DE_SESIONES = 32
 PUNTOS_MAXIMOS_DE_CURVA = 200
@@ -24,9 +26,23 @@ PUNTOS_MAXIMOS_DE_CURVA = 200
 # ---------------------------------------------------------------- simulación
 
 
-def crear_modelo(recinto, parametros, semilla, seguir_un_peaton):
+def celdas_alcanzables(recinto, tipo_vecindad):
+    """Las celdas donde se puede ubicar a alguien: transitables y con camino a
+    alguna salida (depende de la vecindad: con diagonales se llega a más)."""
+    espacio = crear_espacio(
+        **recinto.como_parametros(), tipo_vecindad=tipo_vecindad, random=random.Random(0)
+    )
+    return {
+        celda.coordinate
+        for celda in espacio.all_cells
+        if not es_muro(celda) and not es_salida(celda) and distancia_a_salida(celda) != float("inf")
+    }
+
+
+def crear_modelo(recinto, parametros, semilla, seguir_un_peaton, posiciones_iniciales=None):
     """Un EvacuacionModel listo para correr. Falla con ValueError si hay más
-    peatones pedidos que celdas con camino a una salida."""
+    peatones pedidos que celdas con camino a una salida. Con
+    `posiciones_iniciales`, los peatones se ubican ahí y `num_agentes` no se usa."""
     return EvacuacionModel(
         **recinto.como_parametros(),
         num_agentes=parametros.num_agentes,
@@ -36,6 +52,7 @@ def crear_modelo(recinto, parametros, semilla, seguir_un_peaton):
         probabilidad_friccion=parametros.probabilidad_friccion,
         probabilidad_panico=parametros.probabilidad_panico,
         seguir_un_peaton=seguir_un_peaton,
+        posiciones_iniciales=posiciones_iniciales,
     )
 
 

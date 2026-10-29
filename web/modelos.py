@@ -5,6 +5,7 @@ de rango o un campo que falta se rechaza con un mensaje claro (HTTP 422) en
 vez de explotar adentro del modelo.
 """
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -54,6 +55,9 @@ class RecintoAGuardar(BaseModel):
 class NuevaSimulacion(BaseModel):
     plano: Plano
     parametros: ParametrosSimulacion = ParametrosSimulacion()
+    # "sensores": ubicar a los peatones segun la ocupacion medida por zona (solo
+    # para un recinto guardado) en vez de al azar; num_agentes no se usa
+    ocupacion: Literal["azar", "sensores"] = "azar"
 
 
 class Pasos(BaseModel):
@@ -65,3 +69,32 @@ class NuevaComparacion(BaseModel):
     semillas: int = Field(10, ge=2, le=30)
     parametros: Parametros = Parametros()
     pasos_maximos: int = Field(1000, ge=10, le=5000)
+
+
+class LecturaEntrada(BaseModel):
+    """Lo que informa un sensor: cuanta gente cuenta en una zona."""
+
+    sensor: str = Field("sensor", min_length=1, max_length=40)
+    zona: str = Field(pattern=r"^[A-Z][0-9]{1,2}$")
+    personas: int = Field(ge=0, le=100_000)
+    momento: datetime | None = None  # marca de tiempo del sensor (informativa)
+
+
+class LecturasEntrada(BaseModel):
+    """Un mensaje de un gateway: la division en zonas que usa y sus lecturas."""
+
+    columnas: int = Field(ge=1, le=26)
+    filas: int = Field(ge=1, le=40)
+    lecturas: list[LecturaEntrada] = Field(min_length=1, max_length=200)
+
+
+class SimuladorDeSensores(BaseModel):
+    """Para encender los sensores simulados desde la pantalla."""
+
+    columnas: int = Field(3, ge=1, le=26)
+    filas: int = Field(2, ge=1, le=40)
+    total: int = Field(40, ge=1, le=2000)  # personas que hay en el recinto
+    escenario: Literal["parejo", "concentrado"] = "parejo"
+    zona_llena: str | None = Field(None, pattern=r"^[A-Z][0-9]{1,2}$")
+    intervalo_s: float = Field(2.0, ge=0.1, le=30)
+    falla: bool = False  # el sensor de la ultima zona deja de reportar tras unos envios
