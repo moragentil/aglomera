@@ -11,8 +11,8 @@ donde se va a presentar.
 |---|---|---|
 | 1 | El problema y el objetivo | 1 min |
 | 2 | Enfoque y pilares de Industria 4.0 | 2 min |
-| 3 | Cómo funciona el modelo | 3 min |
-| 4 | Demo en vivo (app web) | 4 min |
+| 3 | Cómo funciona el modelo | 2 min |
+| 4 | Demo en vivo (app web) | 5 min |
 | 5 | Resultados (Monte Carlo) | 3 min |
 | 6 | Qué no salió como esperábamos | 1 min |
 | 7 | Limitaciones y trabajo futuro | 1 min |
@@ -33,8 +33,10 @@ donde se va a presentar.
     simula y se compara.
   - **Big Data y análisis**: corridas Monte Carlo a CSV analizadas con Pandas, y
     la pestaña *Comparar* de la app, que repite cada recinto con varias semillas.
-  - **IoT**: propuesta de arquitectura (ver [iot.md](iot.md)); aclarar que **no
-    está implementada**.
+  - **IoT**: un prototipo con **sensores simulados** que informan cuánta gente
+    hay en cada zona y alimentan la simulación (ver [iot.md](iot.md)). Aclarar
+    que los sensores son simulados y que MQTT y los sensores físicos siguen
+    siendo propuesta.
 
 ## 3. Cómo funciona el modelo
 
@@ -80,7 +82,8 @@ Guion de la demo (unos 4 minutos):
 2. **Simular (2 min).** Apretar "Simular este diseño" (o elegir la sala con
    puerta) y reproducir. Señalar los peatones **bloqueados en rojo**
    amontonados en la puerta y la tarjeta "Bloqueados ahora": con esta semilla
-   llegan a **26 de 40 a la vez**. Al terminar: **55 pasos**.
+   llegan a **26 de 40 a la vez**. Al terminar: **55 pasos**. Si va demasiado rápido para explicar, bajar la
+   velocidad a 0,5× o 0,25×.
    - Subir la **fricción a 60%** y "Aplicar y reiniciar": termina en **86**.
      Explicar que es el roce y los empujones en la puerta.
    - Volver la fricción a 0, subir el **pánico a 60%** y reiniciar: la gente deja
@@ -93,6 +96,18 @@ Guion de la demo (unos 4 minutos):
    contra 58 pasos y la congestión máxima, 41% contra 65% de la gente. Aclarar que
    todos los recintos corren con las **mismas semillas**: la única diferencia es
    el recinto.
+
+4. **IoT (1 min).** En *Simular*, con `sala_con_puerta` elegido, en el panel
+   *Sensores de ocupación*: **paso 1**, apretar **Iniciar sensores simulados**
+   (marcando "Simular que un sensor falla" si se quiere mostrar ese caso). El
+   panel muestra cada zona (personas, antigüedad, estado) y el plano dibuja las
+   zonas. **Paso 2**, elegir **Medida por los sensores**: la simulación empieza
+   con esa gente en cada zona y el slider de peatones queda bloqueado porque el
+   total lo dan los sensores. Explicar que el campo "Personas que hay en el
+   recinto" es de los sensores falsos: en un recinto real lo sabrían los sensores. Si un sensor falla, tras 30 segundos esa zona pasa a **SIN SEÑAL** y
+   deja de usarse. Aclarar que el botón corre los sensores dentro del servidor y
+   que también existe un programa aparte (`python -m iot.simulador_sensores`)
+   que le habla a la API por la red, como lo haría un gateway real.
 
 Las apps de Solara (`app.py` y `editor.py`) siguen funcionando, pero la demo se
 hace con la app web.
@@ -157,8 +172,9 @@ Vale la pena contarlo: muestra que se entienden las hipótesis del modelo.
 - La pestaña *Comparar* muestra media, desvío y P95, pero **todavía no hay un
   test estadístico formal** que diga si una diferencia es significativa. Es el
   siguiente paso para el análisis.
-- IoT queda como propuesta de arquitectura. Siguiente paso: un prototipo con
-  sensores simulados que alimenten la simulación a través de la API.
+- IoT es un prototipo: los sensores son **simulados**, hay HTTP en lugar de MQTT,
+  las lecturas viven en memoria y no se autentica a los dispositivos. Siguientes
+  pasos: MQTT, guardar las lecturas y autenticar a los sensores.
 - Otras mejoras ya anotadas: mapa de calor de densidad, escenarios
   predeterminados y exportar la simulación como GIF.
 
@@ -188,10 +204,20 @@ entre sí sin cruzar la salida. Con probabilidades menores a 1 siempre hay una
 chance de actuar racionalmente y salir.
 
 **¿Dónde está el IoT?**
-Es una propuesta de arquitectura, no está implementada. Está descripta en
-[iot.md](iot.md): qué sensores aportarían datos, cómo alimentarían al
-simulador y qué le faltaría al código para soportarlo. Ahora que existe la API
-web, el siguiente paso es un prototipo con sensores simulados.
+Hay un prototipo funcional con sensores **simulados**: un script hace de
+gateway y envía a la API cuánta gente cuenta en cada zona del recinto; la API
+guarda la última lectura de cada zona, y la simulación puede arrancar con esa
+ocupación medida. Lo que no hay son sensores físicos, un broker MQTT ni una base
+de datos: está descripto en [iot.md](iot.md) como propuesta.
+
+**¿Qué pasa si un sensor deja de funcionar?**
+Cada lectura caduca a los 30 segundos: esa zona pasa a *SIN SEÑAL* y deja de
+usarse para simular, en lugar de inventar cuánta gente hay. Un sensor que sigue
+reportando pero está descalibrado, en cambio, no se detecta.
+
+**¿Por qué HTTP y no MQTT?**
+Porque alcanza para demostrar el flujo completo sin instalar un broker, y el
+diseño por capas es el mismo: cambiar el transporte no toca el resto.
 
 **¿Por qué el default es Von Neumann y no Moore?**
 Con 4 direcciones un muro de una celda obliga a dar un desvío real y los
@@ -220,6 +246,8 @@ solo datos que el modelo realmente calcula.
 - [ ] `venv/bin/python -m pytest tests/ -q` pasa.
 - [ ] La app web abre en `http://localhost:8000`, se puede dibujar, guardar,
       simular y comparar.
+- [ ] Los sensores simulados funcionan: el botón *Iniciar sensores simulados*
+      de la pestaña Simular deja las 6 zonas activas.
 - [ ] Probar la app **sin conexión** (desconectar el wifi) en la computadora y
       la pantalla donde se va a presentar.
 - [ ] Verificar que los números de la demo (55, 86 y 187 pasos; 53,8 contra 28,0

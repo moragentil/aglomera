@@ -14,7 +14,7 @@ se empuja, se desvía o entra en pánico.
 |---|---|
 | Simulación (núcleo) | Autómata celular con agentes (Mesa) y visualización interactiva (Solara) |
 | Big Data y análisis | Corridas Monte Carlo (`experiments/`) que generan CSV, analizados con Pandas (`notebooks/`) |
-| IoT | Solo como extensión de arquitectura, **no implementada** |
+| IoT | **Prototipo** con sensores simulados: conteos por zona que llegan a la API y alimentan la simulación. Sensores físicos y MQTT son solo propuesta |
 
 ## Qué incluye hoy
 
@@ -36,7 +36,7 @@ se empuja, se desvía o entra en pánico.
 - Cuatro experimentos Monte Carlo reproducibles con un comando y un notebook
   que los analiza.
 - Métrica de cuánta gente usó cada salida.
-- 113 tests automáticos.
+- 184 tests automáticos.
 
 ## Documentación
 
@@ -46,7 +46,7 @@ se empuja, se desvía o entra en pánico.
   decisiones de modelado.
 - [docs/arquitectura.md](docs/arquitectura.md): diagramas de los módulos, del
   paso de la simulación y de la decisión de un peatón.
-- [docs/iot.md](docs/iot.md): propuesta de extensión con IoT (no implementada).
+- [docs/iot.md](docs/iot.md): el prototipo de IoT (qué está implementado y qué es solo propuesta).
 - [docs/guion_defensa.md](docs/guion_defensa.md): borrador del guion de la
   defensa, con la demo y las preguntas probables.
 
@@ -161,7 +161,8 @@ y se abre en `http://localhost:8000`. Tiene tres pestañas:
 1. **Diseño**: el editor. Se pinta con clic o arrastre (herramientas pared,
    salida y borrar, con atajos W, E, X y Ctrl+Z), se valida en vivo y se guarda
    en `recintos/`. Muestra los recintos guardados con su miniatura.
-2. **Simular**: reproduce la evacuación (pausa, paso a paso, velocidad), con
+2. **Simular**: reproduce la evacuación (pausa, paso a paso y velocidades desde
+   0,25× hasta 10×), con
    las métricas reales (paso, evacuados, bloqueados, flujo de salida), la curva
    de evacuación en vivo y el panel de parámetros (peatones, agresividad,
    fricción, pánico, vecindad y semilla). Se puede simular el diseño que se está
@@ -176,6 +177,36 @@ documentación interactiva de la API está en `http://localhost:8000/api/docs`.
 Tailwind y las fuentes están dentro del proyecto (`web/static/vendor/`), así
 que la app **funciona sin conexión**. Las dos apps de Solara de más arriba
 (`app.py` y `editor.py`) siguen funcionando.
+
+**IoT: sensores simulados que alimentan la simulación.** Prototipo del tercer
+pilar. Los sensores (simulados) informan a la API cuánta gente cuentan en cada
+zona del recinto, y la simulación puede arrancar con esa ocupación medida en
+lugar de ubicar a la gente al azar.
+
+Es opcional y se hace en dos pasos, desde la pestaña **Simular**, con un recinto
+guardado, en el panel *Sensores de ocupación (IoT)*:
+
+1. **Encender los sensores**: se aprieta **Iniciar sensores simulados** (se elige
+   cuánta gente fingen contar, si está repartida pareja o concentrada, y si se
+   quiere simular que un sensor falla). El panel muestra cada zona (personas,
+   antigüedad y estado) y el plano muestra las zonas.
+2. **Elegir de dónde sale la gente**: *Al azar, según el slider* (lo de siempre)
+   o *Medida por los sensores*, que reinicia la simulación con esa gente en cada
+   zona.
+
+Sin sensores todo funciona como antes. Una zona que deja de reportar pasa a
+**SIN SEÑAL** y no se usa.
+
+Los mismos sensores existen también como un programa aparte, que hace de
+gateway y le habla a la API por la red, igual que lo haría hardware real. Con el
+servidor andando, en otra terminal:
+
+```bash
+venv/bin/python -m iot.simulador_sensores --recinto sala_con_puerta
+```
+
+Ver [docs/iot.md](docs/iot.md), que explica qué está implementado y qué sigue
+siendo propuesta (sensores físicos, MQTT, base de series de tiempo).
 
 **Tests:**
 
@@ -318,17 +349,23 @@ Resultados negativos que vale la pena conocer:
 - Una celda es una persona y un paso no tiene una duración calibrada: no hay
   escala en metros ni en segundos.
 - El floor field es estático (solo distancia), no tiene en cuenta a la gente.
-- El recinto está fijo en `app.py`; todavía no se puede cargar un plano.
+- Los recintos dibujados no tienen escala real, y el importador de imágenes no detecta puertas ni interpreta planos de edificios reales.
+- Con vecindad de 8 direcciones, una pared dibujada en diagonal deja pasar gente.
+- La comparación de recintos no incluye un test de significancia estadística.
 - Los experimentos no incluyen la agresividad, y la combinación de agresividad
   con fricción no se estudió de forma sistemática.
-- No hay tests de `src/visualization.py`.
-- IoT y el dashboard de Streamlit no están implementados.
+- No hay tests automáticos de `src/visualization.py` ni del frontend de la app web (se verificó a mano).
+- IoT es un prototipo: los sensores son simulados, sin autenticación ni persistencia de las lecturas. El dashboard de Streamlit no se implementó (lo reemplaza la app web).
 
 ## Próximos pasos
 
-1. Definir el recinto desde un archivo (formato de texto o JSON), con editor
-   visual y, como opcional, importar un plano como imagen.
-2. Escenario de dos salidas en el visualizador para mostrar el pánico en vivo.
+1. Un test estadístico (Welch) en la pestaña Comparar, para saber si una
+   diferencia entre recintos es significativa.
+2. Mapa de calor de densidad, escenarios predeterminados y exportar la
+   simulación como GIF.
+3. IoT: transporte MQTT, guardar las lecturas y autenticar a los sensores.
+
+El detalle y el orden están en el tablero de Trello.
 
 ## Flujo de trabajo
 

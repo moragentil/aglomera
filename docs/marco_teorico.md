@@ -226,6 +226,7 @@ para eso haría falta un test de significancia, que está pendiente.
 | Recinto desde un dibujo (sin IA) | `src/recinto_imagen.py` |
 | Editor visual | `web/static/js/diseno.js` (app web), `src/editor_recinto.py` |
 | Comparación de recintos | `web/servicios.py` (`comparar`) |
+| Ocupación medida por zona (IoT) | `src/zonas.py`, `web/sensores.py`, `iot/simulador_sensores.py` |
 
 ## 7. Limitaciones respecto de la teoría
 
@@ -243,6 +244,9 @@ para eso haría falta un test de significancia, que está pendiente.
 - Con vecindad de 8 direcciones, una pared diagonal deja pasar gente (ver 5.8).
 - La comparación de recintos informa media, desvío y percentil 95, pero no
   incluye un test de significancia estadística.
+- La ocupación medida por zona solo fija dónde empieza la gente: dentro de una
+  zona las posiciones se sortean, porque un contador no informa dónde está cada
+  persona. Los sensores del prototipo son simulados.
 
 ## 8. Referencias
 

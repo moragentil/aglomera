@@ -16,6 +16,9 @@ flowchart LR
     viz --> space
     web["web/app.py"] --> servicios["web/servicios.py"]
     web --> recinto
+    web --> sensores["web/sensores.py"]
+    web --> zonas["src/zonas.py"]
+    gateway["iot/simulador_sensores.py"] -- "HTTP /api/sensores" --> web
     servicios --> model
     pantalla["web/static (HTML, CSS y JS)"] -- "HTTP /api" --> web
     batch["experiments/run_batch.py"] --> model
@@ -32,6 +35,10 @@ flowchart LR
 | `recinto.py` | Lee un plano de texto (`recintos/*.txt`) y lo traduce a ancho, alto, salidas y muros. No sabe nada del modelo. |
 | `web/app.py` | La API web (FastAPI): rutas de recintos, simulaciones y comparaciones. Solo traduce pedidos HTTP a llamadas de `servicios.py` y de `src/`. |
 | `web/servicios.py` | La lógica de la app web sin HTTP: sesiones de simulación, estado para dibujar y el experimento de comparación (media, desvío, P95, curvas). |
+| `web/sensores.py` | Registro de las lecturas de sensores: guarda la última de cada zona y decide si siguió activa (caducan a los 30 s). |
+| `src/zonas.py` | Parte el recinto en zonas con nombre y traduce un conteo por zona a celdas concretas. No sabe nada de la web ni del modelo. |
+| `web/generador_sensores.py` | Los mismos sensores simulados, pero corriendo dentro del servidor: se encienden y apagan con un botón de la pantalla, sin segunda terminal. |
+| `iot/simulador_sensores.py` | Hace de gateway de sensores: envía conteos por zona a la API. Usa solo la biblioteca estándar. |
 | `web/modelos.py` | Los datos que acepta la API, validados con pydantic. |
 | `web/static/` | La pantalla: `js/diseno.js`, `js/simulacion.js` y `js/comparar.js` (una por pestaña), `dibujo.js` (canvas) y `graficos.js` (SVG). |
 | `editor_recinto.py` y `editor_ui.py` | El editor visual: la lógica (pintar, redimensionar, validar, guardar) y la pantalla de Solara con la grilla (`grilla_editable.vue`). Guarda un plano de texto en `recintos/`. |
@@ -138,6 +145,7 @@ configuraciones.
 | Un recinto dibujado en una imagen | Un `.png` en `recintos/` y `AGLOMERA_ANCHO_CELDAS` |
 | Dibujar un recinto con el mouse | La pestaña Diseño de la app web (`uvicorn web.app:app`) o `venv/bin/solara run editor.py` |
 | Una pantalla o un gráfico nuevo | `web/static/js/` |
+| Probar el flujo de sensores | `venv/bin/python -m iot.simulador_sensores --recinto <nombre>` (ver `docs/iot.md`) |
 | Un dato nuevo para la pantalla | `web/servicios.py` y la ruta en `web/app.py` |
 | Otra forma de definir el recinto | Un módulo nuevo que produzca un `Recinto` |
 | Un nuevo tipo de celda (por ejemplo una zona lenta) | `space.py` |
