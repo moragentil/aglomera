@@ -1,8 +1,11 @@
+import random
+
 import pytest
 
 from experiments.run_batch import SALA_CON_DOS_SALIDAS, SALA_CON_PUERTA
 from src.model import EvacuacionModel
 from src.recinto import Recinto, RecintoInvalido, cargar_recinto, leer_recinto_texto
+from src.space import crear_espacio, distancia_a_salida
 
 
 def test_lee_ancho_alto_salidas_y_muros():
@@ -106,3 +109,19 @@ def test_no_coloca_peatones_en_zonas_encerradas_sin_camino_a_la_salida():
     assert all(peaton.cell.coordinate[0] < 2 for peaton in model.agents)
     with pytest.raises(ValueError, match="camino a una salida"):
         EvacuacionModel(**recinto.como_parametros(), num_agentes=4, rng=1)
+
+
+def test_dos_paredes_que_solo_se_tocan_por_la_esquina_dejan_pasar_con_moore_y_no_con_von_neumann():
+    # la salida (arriba a la izquierda) queda cerrada por dos paredes en diagonal:
+    # es el caso de una pared dibujada "en escalera". Esta es una limitacion
+    # conocida del modelo y esta documentada en el README.
+    recinto = leer_recinto_texto("S#.\n#..\n...\n")
+
+    distancias = {}
+    for vecindad in ("von_neumann", "moore"):
+        espacio = crear_espacio(**recinto.como_parametros(), tipo_vecindad=vecindad, random=random.Random(1))
+        celda = next(c for c in espacio.all_cells if c.coordinate == (1, 1))
+        distancias[vecindad] = distancia_a_salida(celda)
+
+    assert distancias["von_neumann"] == float("inf")
+    assert distancias["moore"] == 1

@@ -34,7 +34,7 @@ se empuja, se desvía o entra en pánico.
 - Cuatro experimentos Monte Carlo reproducibles con un comando y un notebook
   que los analiza.
 - Métrica de cuánta gente usó cada salida.
-- 64 tests automáticos.
+- 85 tests automáticos.
 
 ## Documentación
 
@@ -123,6 +123,27 @@ mínimo (`--grosor`, 2 píxeles por defecto) puede perderse. Distinguir puertas
 y paredes en el plano escaneado de un edificio real (con escala, ruido y
 símbolos) es otro problema, mucho más grande, y no está resuelto: las salidas
 siempre se marcan a mano en verde.
+
+**Editor visual.** Para dibujar el recinto con el mouse, sin escribir texto ni
+usar otro programa:
+
+```bash
+venv/bin/solara run editor.py
+```
+
+Se elige una herramienta (pared, salida o borrar) y se hace clic o se arrastra
+sobre la grilla; arrastrar une los puntos con una recta, así que las paredes
+salen continuas aunque el mouse vaya rápido. Se puede cambiar el tamaño, poner
+pared en todo el borde, abrir un recinto guardado para modificarlo y guardar el
+resultado en `recintos/`. El editor avisa si el plano todavía no sirve (por
+ejemplo, si falta una salida) y no pisa un archivo existente salvo que se marque
+"sobrescribir". Lo guardado se simula con
+`AGLOMERA_RECINTO=<nombre> venv/bin/solara run app.py`.
+
+Una advertencia sobre las paredes en diagonal: el modelo permite moverse en
+diagonal entre dos celdas de pared que solo se tocan por la esquina cuando la
+vecindad es `moore`, así que una pared dibujada en diagonal deja pasar gente
+con esa vecindad. Con `von_neumann` (4 direcciones) no hay filtración.
 
 **Tests:**
 
