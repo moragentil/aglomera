@@ -20,6 +20,8 @@ se empuja, se desvía o entra en pánico.
 
 - Recinto en grilla 2D con salidas y muros, y un *floor field* (mapa de
   distancia a la salida más cercana) calculado una sola vez.
+- **App web propia** (FastAPI + frontend) con tres pantallas: diseñar el recinto,
+  simularlo y comparar recintos con varias semillas.
 - Recintos definidos por el usuario: un plano de texto o una imagen dibujada
   (negro pared, verde salida), en `recintos/`.
 - Peatones que avanzan hacia la salida y se bloquean entre sí, con una métrica
@@ -34,7 +36,7 @@ se empuja, se desvía o entra en pánico.
 - Cuatro experimentos Monte Carlo reproducibles con un comando y un notebook
   que los analiza.
 - Métrica de cuánta gente usó cada salida.
-- 64 tests automáticos.
+- 113 tests automáticos.
 
 ## Documentación
 
@@ -53,6 +55,7 @@ se empuja, se desvía o entra en pánico.
 - Python (desarrollado con 3.14)
 - [Mesa](https://mesa.readthedocs.io) 3.5 (simulación basada en agentes) y
   Solara (visualizador interactivo)
+- FastAPI (servidor de la app web) con un frontend en HTML, CSS y JavaScript
 - NumPy y Pandas (análisis), Matplotlib (dibujo de la grilla y gráficos)
 - pytest (tests)
 
@@ -123,6 +126,56 @@ mínimo (`--grosor`, 2 píxeles por defecto) puede perderse. Distinguir puertas
 y paredes en el plano escaneado de un edificio real (con escala, ruido y
 símbolos) es otro problema, mucho más grande, y no está resuelto: las salidas
 siempre se marcan a mano en verde.
+
+**Editor visual.** Para dibujar el recinto con el mouse, sin escribir texto ni
+usar otro programa:
+
+```bash
+venv/bin/solara run editor.py
+```
+
+Se elige una herramienta (pared, salida o borrar) y se hace clic o se arrastra
+sobre la grilla; arrastrar une los puntos con una recta, así que las paredes
+salen continuas aunque el mouse vaya rápido. Se puede cambiar el tamaño, poner
+pared en todo el borde, abrir un recinto guardado para modificarlo y guardar el
+resultado en `recintos/`. El editor avisa si el plano todavía no sirve (por
+ejemplo, si falta una salida) y no pisa un archivo existente salvo que se marque
+"sobrescribir". Lo guardado se simula con
+`AGLOMERA_RECINTO=<nombre> venv/bin/solara run app.py`.
+
+Una advertencia sobre las paredes en diagonal: el modelo permite moverse en
+diagonal entre dos celdas de pared que solo se tocan por la esquina cuando la
+vecindad es `moore`, así que una pared dibujada en diagonal deja pasar gente
+con esa vecindad. Con `von_neumann` (4 direcciones) no hay filtración.
+
+**App web propia (diseñar, simular y comparar en un solo lugar).** Es la
+interfaz principal del proyecto: un servidor FastAPI que usa el mismo modelo y
+los mismos recintos, y una pantalla con diseño propio. Se levanta con:
+
+```bash
+venv/bin/uvicorn web.app:app --port 8000
+```
+
+y se abre en `http://localhost:8000`. Tiene tres pestañas:
+
+1. **Diseño**: el editor. Se pinta con clic o arrastre (herramientas pared,
+   salida y borrar, con atajos W, E, X y Ctrl+Z), se valida en vivo y se guarda
+   en `recintos/`. Muestra los recintos guardados con su miniatura.
+2. **Simular**: reproduce la evacuación (pausa, paso a paso, velocidad), con
+   las métricas reales (paso, evacuados, bloqueados, flujo de salida), la curva
+   de evacuación en vivo y el panel de parámetros (peatones, agresividad,
+   fricción, pánico, vecindad y semilla). Se puede simular el diseño que se está
+   dibujando sin guardarlo.
+3. **Comparar**: se eligen varios recintos y se corren con las mismas semillas.
+   Muestra qué recinto evacúa más rápido y cuánto, un gráfico de barras con
+   desvío, las curvas de evacuación y una tabla (pasos medios, desvío, P95,
+   congestión máxima). Se exporta a CSV.
+
+Todo lo que se ve sale de la simulación real; nada es de relleno. La
+documentación interactiva de la API está en `http://localhost:8000/api/docs`.
+Tailwind y las fuentes están dentro del proyecto (`web/static/vendor/`), así
+que la app **funciona sin conexión**. Las dos apps de Solara de más arriba
+(`app.py` y `editor.py`) siguen funcionando.
 
 **Tests:**
 

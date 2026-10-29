@@ -1,0 +1,86 @@
+/* Lo que Tailwind no cubre: pestañas, deslizadores y el scroll. */
+
+html,
+body {
+  background: #0f131c;
+  overscroll-behavior: none;
+}
+
+.vista {
+  min-height: calc(100vh - 3.5rem);
+}
+.vista[hidden] {
+  display: none;
+}
+
+/* pestañas de la navegacion superior */
+.nav-pestana {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #bec8d2;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-pestana:hover {
+  color: #dfe2ee;
+  background: #181c24;
+}
+.nav-pestana.activa {
+  color: #89ceff;
+  background: #262a33;
+  border-bottom-color: #89ceff;
+}
+
+/* deslizadores: riel fino y pulgar rectangular, como en el sistema de diseño */
+input[type="range"].deslizador {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: #3e4850;
+  outline: none;
+  margin: 10px 0;
+}
+input[type="range"].deslizador::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 14px;
+  background: #0ea5e9;
+  border-radius: 2px;
+  cursor: pointer;
+}
+input[type="range"].deslizador::-moz-range-thumb {
+  width: 10px;
+  height: 14px;
+  background: #0ea5e9;
+  border: 0;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.lienzo {
+  display: block;
+  touch-action: none;
+  image-rendering: auto;
+}
+
+/* barras de scroll discretas */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3e4850 transparent;
+}
+
+/* aviso de carga de la comparacion */
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.girando {
+  animation: girar 0.9s linear infinite;
+}
