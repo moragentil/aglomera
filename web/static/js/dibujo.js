@@ -106,6 +106,33 @@ export function dibujarSimulacion(ctx, filas, estado, celda) {
   }
 }
 
+/** Las zonas de los sensores sobre el plano: un recuadro punteado por zona con su
+ *  conteo. `zonas` viene de la API (columna, fila, ancho y alto en celdas). */
+export function dibujarZonas(ctx, zonas, celda) {
+  const tamano = Math.max(9, Math.min(13, Math.round(celda * 0.6)));
+  ctx.save();
+  ctx.font = `600 ${tamano}px "JetBrains Mono", monospace`;
+  ctx.textBaseline = "middle";
+  for (const zona of zonas) {
+    const x = zona.columna * celda;
+    const y = zona.fila * celda;
+    const activa = zona.estado === "ACTIVO";
+    ctx.strokeStyle = activa ? "#0ea5e9" : "#94a3b8";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeRect(x + 0.75, y + 0.75, zona.ancho * celda - 1.5, zona.alto * celda - 1.5);
+    ctx.setLineDash([]);
+
+    const texto = `${zona.id} · ${zona.personas ?? "—"}`;
+    const alto = tamano + 8;
+    ctx.fillStyle = "rgba(10, 14, 22, 0.85)";
+    ctx.fillRect(x + 3, y + 3, ctx.measureText(texto).width + 10, alto);
+    ctx.fillStyle = activa ? "#89ceff" : "#94a3b8";
+    ctx.fillText(texto, x + 8, y + 3 + alto / 2);
+  }
+  ctx.restore();
+}
+
 /** Una miniatura de un plano dentro de un canvas chico. */
 export function dibujarMiniatura(canvas, filas) {
   const ancho = filas[0].length;

@@ -2,19 +2,25 @@
 // esta pantalla pide pasos, dibuja lo que vuelve y muestra las metricas.
 
 import { api } from "./api.js";
-import { COLORES, ajustarCanvas, dibujarSimulacion } from "./dibujo.js";
+import { COLORES, ajustarCanvas, dibujarSimulacion, dibujarZonas } from "./dibujo.js";
 import { graficoLineas } from "./graficos.js";
 import { icono } from "./iconos.js";
 
 const DISENO_ACTUAL = "__diseno__";
+// 1× son 10 pasos por segundo. Las velocidades lentas esperan más entre un paso y
+// el siguiente; las rápidas hacen varios pasos cada 100 ms.
 const VELOCIDADES = [
-  { etiqueta: "1×", pasosPorTick: 1 },
-  { etiqueta: "2×", pasosPorTick: 2 },
-  { etiqueta: "5×", pasosPorTick: 5 },
-  { etiqueta: "10×", pasosPorTick: 10 },
+  { etiqueta: "0,25×", pasosPorTick: 1, ms: 400 },
+  { etiqueta: "0,5×", pasosPorTick: 1, ms: 200 },
+  { etiqueta: "0,75×", pasosPorTick: 1, ms: 133 },
+  { etiqueta: "1×", pasosPorTick: 1, ms: 100 },
+  { etiqueta: "2×", pasosPorTick: 2, ms: 100 },
+  { etiqueta: "5×", pasosPorTick: 5, ms: 100 },
+  { etiqueta: "10×", pasosPorTick: 10, ms: 100 },
 ];
-const MS_POR_TICK = 100;
+const VELOCIDAD_POR_DEFECTO = 3; // 1×
 const PASOS_PARA_EL_FLUJO = 10;
+const MS_ENTRE_CONSULTAS_DE_SENSORES = 2000;
 
 const PARAMETROS_POR_DEFECTO = {
   num_agentes: 40,
@@ -95,6 +101,48 @@ const PLANTILLA = `
   </div>
 
   <aside class="tarjeta flex w-full shrink-0 flex-col gap-5 self-start p-4 lg:w-80">
+    <div class="flex flex-col gap-3 border-b border-outline-variant/30 pb-5">
+      <div class="flex items-center justify-between">
+        <span class="etiqueta">Sensores de ocupación (IoT)</span>
+        <span id="sensores-estado" class="rounded-full border border-outline-variant/60 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider"></span>
+      </div>
+      <p class="text-[11px] leading-snug text-on-surface-variant">Es opcional. Con sensores, la simulación arranca con la gente que ellos cuentan en cada zona. Sin sensores, usa el slider «Cantidad de peatones».</p>
+
+      <span class="etiqueta !text-primary">Paso 1 · Encender los sensores</span>
+      <div id="sensores-contenido" class="text-xs"></div>
+      <div id="sensores-simulador" class="flex flex-col gap-2 rounded border border-outline-variant/30 bg-surface-container-lowest p-3">
+        <span class="etiqueta">Sensores simulados</span>
+        <label class="flex flex-col gap-1 text-[11px] text-on-surface-variant">Personas que hay en el recinto
+          <input type="number" id="sim-total" class="entrada !py-1" min="1" max="500" value="40" />
+          <span class="leading-snug">Es lo que los sensores falsos fingen contar. En un recinto real lo daría la gente que entró.</span></label>
+        <label class="flex flex-col gap-1 text-[11px] text-on-surface-variant">Cómo se reparten
+          <select id="sim-escenario" class="entrada !py-1">
+            <option value="parejo">Parejo en todo el recinto</option>
+            <option value="concentrado">Concentrada en una zona</option>
+          </select></label>
+        <label class="flex items-center gap-2 text-[11px]">
+          <input type="checkbox" id="sim-falla" class="accent-[#0ea5e9]" /> Simular que un sensor falla
+        </label>
+        <button type="button" id="btn-sensores" class="btn-primario"></button>
+        <p id="sim-estado" class="font-mono text-[10px] leading-snug text-on-surface-variant"></p>
+      </div>
+
+      <span class="etiqueta !text-primary">Paso 2 · ¿De dónde sale la gente?</span>
+      <div class="flex flex-col gap-2">
+        <label class="flex items-start gap-2 text-xs">
+          <input type="radio" name="fuente" id="fuente-azar" class="mt-0.5 accent-[#0ea5e9]" checked />
+          <span>Al azar, según el slider<br /><span class="text-[11px] leading-snug text-on-surface-variant">La cantidad la elegís en «Cantidad de peatones».</span></span>
+        </label>
+        <label class="flex items-start gap-2 text-xs">
+          <input type="radio" name="fuente" id="fuente-sensores" class="mt-0.5 accent-[#0ea5e9]" />
+          <span>Medida por los sensores<br /><span id="usar-sensores-detalle" class="text-[11px] leading-snug text-on-surface-variant"></span></span>
+        </label>
+      </div>
+      <p id="fuente-ayuda" class="rounded bg-surface-container-lowest p-2 text-[11px] leading-snug text-on-surface-variant"></p>
+      <label class="flex items-center gap-2 text-xs">
+        <input type="checkbox" id="ver-zonas" class="accent-[#0ea5e9]" checked /> Ver las zonas en el plano
+      </label>
+    </div>
     <span class="etiqueta">Parámetros del motor</span>
     ${DESLIZADORES.map(
       ([clave, titulo, min, max, paso, , ayuda]) => `
@@ -146,8 +194,13 @@ export function montar(raiz, app) {
   let estado = null;
   let historia = { pasos: [], evacuados: [] };
   let reproduciendo = false;
-  let velocidad = 0;
+  let velocidad = VELOCIDAD_POR_DEFECTO;
   let celda = 20;
+  let sensores = null; // lo ultimo que informo la API (o null si no hay)
+  let usarSensores = false;
+  let totalDeSensoresEditado = false;
+  let totalMedidoUsado = null; // cuantas personas se ubicaron al iniciar con ocupacion medida
+  let temporizadorDeSensores = null;
 
   // ------------------------------------------------------------- pintar
 
@@ -158,7 +211,11 @@ export function montar(raiz, app) {
   }
 
   function trazar() {
-    if (plano && estado) dibujarSimulacion(ctx, plano.filas, estado, celda);
+    if (!plano || !estado) return;
+    dibujarSimulacion(ctx, plano.filas, estado, celda);
+    if ($("#ver-zonas").checked && sensores?.hay_datos && esUnRecintoGuardado()) {
+      dibujarZonas(ctx, sensores.zonas, celda);
+    }
   }
 
   function flujo() {
@@ -224,6 +281,111 @@ export function montar(raiz, app) {
       boton.classList.toggle("btn-activo", boton.dataset.vecindad === parametros.tipo_vecindad);
     });
     $("#semilla").value = parametros.semilla;
+    if (!totalDeSensoresEditado && !$("#sim-total").disabled) {
+      $("#sim-total").value = Math.min(500, parametros.num_agentes);
+    }
+    actualizarOpcionDeSensores();
+  }
+
+  // ------------------------------------------------------------ sensores
+
+  const esUnRecintoGuardado = () => $("#origen").value !== DISENO_ACTUAL;
+
+  function actualizarOpcionDeSensores() {
+    const disponible = esUnRecintoGuardado() && (sensores?.zonas_vigentes ?? 0) > 0;
+    if (!disponible) usarSensores = false;
+    $("#fuente-sensores").disabled = !disponible;
+    $("#fuente-sensores").checked = usarSensores;
+    $("#fuente-azar").checked = !usarSensores;
+    $("#usar-sensores-detalle").textContent = disponible
+      ? `${sensores.total_vigente} personas medidas en ${sensores.zonas_vigentes} zonas activas`
+      : "Disponible cuando haya sensores activos (paso 1).";
+    let ayuda;
+    if (!esUnRecintoGuardado()) ayuda = "Para usar sensores, elegí un recinto guardado en «Recinto».";
+    else if (!disponible) ayuda = "Para usar sensores, primero encendelos en el paso 1.";
+    else if (!usarSensores) ayuda = "Los sensores ya están informando, pero la simulación todavía usa el slider. Elegí «Medida por los sensores» para usarlos.";
+    else ayuda = `La simulación empezó con ${totalMedidoUsado ?? sensores.total_vigente} personas medidas por los sensores; el slider no se usa.`;
+    $("#fuente-ayuda").textContent = ayuda;
+    // con ocupacion medida la cantidad de peatones la dan los sensores, no el slider
+    $("#parametro-num_agentes").disabled = usarSensores;
+    $("#valor-num_agentes").textContent = usarSensores
+      ? `${totalMedidoUsado ?? sensores.total_vigente} (medidos)`
+      : parametros.num_agentes;
+  }
+
+  function actualizarControlesDelSimulador() {
+    const visible = esUnRecintoGuardado();
+    $("#sensores-simulador").classList.toggle("hidden", !visible);
+    if (!visible) return;
+    const simulador = sensores?.simulador;
+    const activo = Boolean(simulador?.activo);
+    for (const id of ["#sim-total", "#sim-escenario", "#sim-falla"]) $(id).disabled = activo;
+    $("#btn-sensores").className = activo ? "btn" : "btn-primario";
+    $("#btn-sensores").innerHTML = activo ? `${icono("pausa", 14)} Apagar sensores simulados` : `${icono("rayo", 14)} Iniciar sensores simulados`;
+    if (activo) {
+      const falla = simulador.zona_con_falla
+        ? ` El sensor de ${simulador.zona_con_falla} falla tras ${simulador.envios_antes_de_la_falla} envíos.`
+        : "";
+      $("#sim-estado").textContent = `Generando datos cada ${simulador.intervalo_s} s · envío ${simulador.envios}.${falla}`;
+    } else {
+      $("#sim-estado").textContent = "Apagados. Las lecturas que quedaron caducan solas y las zonas pasan a SIN SEÑAL.";
+    }
+  }
+
+  function dibujarEstadoDeSensores() {
+    const caja = $("#sensores-contenido");
+    const pastilla = $("#sensores-estado");
+    const colorDeLaPastilla = (clases) => (pastilla.className = `rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider ${clases}`);
+
+    if (!esUnRecintoGuardado()) {
+      colorDeLaPastilla("border-outline-variant/60 text-on-surface-variant");
+      pastilla.textContent = "—";
+      caja.innerHTML = `<p class="leading-snug text-on-surface-variant">Los sensores se asocian a un recinto guardado. Guardá el diseño en la pestaña Diseño para usarlos.</p>`;
+    } else if (!sensores?.hay_datos) {
+      colorDeLaPastilla("border-outline-variant/60 text-on-surface-variant");
+      pastilla.textContent = "SIN DATOS";
+      caja.innerHTML = `<p class="leading-snug text-on-surface-variant">Ningún sensor está informando. Encendé los sensores simulados con el botón de abajo.</p>`;
+    } else {
+      const activas = sensores.zonas_vigentes;
+      const todas = sensores.zonas.length;
+      colorDeLaPastilla(activas === todas ? "border-secondary-container text-secondary" : "border-tertiary/60 text-tertiary");
+      pastilla.textContent = `${activas}/${todas} ACTIVAS`;
+      const color = { ACTIVO: "bg-secondary", "SIN SEÑAL": "bg-bloqueo", "SIN DATOS": "bg-outline" };
+      caja.innerHTML = `<table class="w-full font-mono text-[11px]"><thead><tr class="text-left text-on-surface-variant">
+          <th class="py-1 font-semibold">ZONA</th><th class="py-1 text-right font-semibold">PERS.</th><th class="py-1 text-right font-semibold">HACE</th><th class="py-1 pl-2 font-semibold">ESTADO</th></tr></thead><tbody>${
+        sensores.zonas
+          .map(
+            (z) => `<tr class="border-t border-outline-variant/30">
+          <td class="py-1">${z.id}</td><td class="valor py-1 text-right">${z.personas ?? "—"}</td>
+          <td class="valor py-1 text-right text-on-surface-variant">${z.edad_s == null ? "—" : `${Math.round(z.edad_s)} s`}</td>
+          <td class="py-1 pl-2"><span class="mr-1 inline-block h-1.5 w-1.5 rounded-full ${color[z.estado]}"></span>${z.estado}</td></tr>`,
+          )
+          .join("")
+      }</tbody></table>
+      <p class="mt-2 font-mono text-[10px] text-on-surface-variant">Total vigente: <b class="text-on-surface">${sensores.total_vigente}</b> personas. Una zona sin reportar más de ${sensores.caducidad_s} s pasa a SIN SEÑAL y no se usa.</p>`;
+    }
+    actualizarControlesDelSimulador();
+    actualizarOpcionDeSensores();
+  }
+
+  async function consultarSensores() {
+    if (!esUnRecintoGuardado()) {
+      sensores = null;
+    } else {
+      try {
+        sensores = await api.sensores($("#origen").value);
+      } catch {
+        sensores = null; // sin servidor o sin recinto: se muestra como sin datos
+      }
+    }
+    dibujarEstadoDeSensores();
+    trazar();
+  }
+
+  function empezarAConsultarSensores() {
+    clearInterval(temporizadorDeSensores);
+    consultarSensores();
+    temporizadorDeSensores = setInterval(consultarSensores, MS_ENTRE_CONSULTAS_DE_SENSORES);
   }
 
   // ----------------------------------------------------------- servidor
@@ -239,7 +401,9 @@ export function montar(raiz, app) {
     if (sesion) api.borrarSimulacion(sesion).catch(() => {});
     sesion = null;
     try {
-      const creada = await api.crearSimulacion(origenDelPlano(), parametros);
+      const creada = await api.crearSimulacion(origenDelPlano(), parametros, usarSensores ? "sensores" : "azar");
+      if (creada.ocupacion.avisos.length) mostrarAviso(creada.ocupacion.avisos.join(" "));
+      totalMedidoUsado = creada.ocupacion.fuente === "sensores" ? creada.ocupacion.total : null;
       sesion = creada.id;
       plano = creada.plano;
       estado = creada.estado;
@@ -272,7 +436,7 @@ export function montar(raiz, app) {
         mostrarAviso(error.message);
         break;
       }
-      const espera = Math.max(0, MS_POR_TICK - (performance.now() - inicio));
+      const espera = Math.max(0, VELOCIDADES[velocidad].ms - (performance.now() - inicio));
       await new Promise((resolver) => setTimeout(resolver, espera));
     }
     if (sesion === mia) reproduciendo = false;
@@ -300,7 +464,44 @@ export function montar(raiz, app) {
 
   $("#btn-reiniciar").addEventListener("click", reiniciar);
   $("#btn-aplicar").addEventListener("click", reiniciar);
-  $("#origen").addEventListener("change", reiniciar);
+  $("#origen").addEventListener("change", async () => {
+    usarSensores = false;
+    await consultarSensores();
+    reiniciar();
+  });
+  for (const radio of raiz.querySelectorAll('input[name="fuente"]')) {
+    radio.addEventListener("change", async () => {
+      usarSensores = $("#fuente-sensores").checked;
+      totalMedidoUsado = null;
+      actualizarOpcionDeSensores();
+      await reiniciar();
+      actualizarOpcionDeSensores(); // ahora ya se sabe cuantos se usaron
+    });
+  }
+  // el total de los sensores falsos arranca con el valor del slider, salvo que lo cambies a mano
+  $("#sim-total").addEventListener("input", () => (totalDeSensoresEditado = true));
+  $("#ver-zonas").addEventListener("change", trazar);
+  $("#btn-sensores").addEventListener("click", async () => {
+    const recinto = $("#origen").value;
+    $("#btn-sensores").disabled = true;
+    try {
+      if (sensores?.simulador?.activo) {
+        await api.apagarSensores(recinto);
+      } else {
+        const total = Math.min(500, Math.max(1, Math.floor(Number($("#sim-total").value) || 40)));
+        $("#sim-total").value = total;
+        await api.encenderSensores(recinto, {
+          total,
+          escenario: $("#sim-escenario").value,
+          falla: $("#sim-falla").checked,
+        });
+      }
+    } catch (error) {
+      mostrarAviso(error.message);
+    }
+    $("#btn-sensores").disabled = false;
+    await consultarSensores();
+  });
 
   raiz.querySelectorAll("[data-velocidad]").forEach((boton) => {
     boton.addEventListener("click", () => {
@@ -359,10 +560,12 @@ export function montar(raiz, app) {
       ajustar();
       actualizarControles();
     }
+    empezarAConsultarSensores();
   };
 
   alOcultarPantalla = () => {
     reproduciendo = false; // no seguir calculando pasos si se cambia de pantalla
+    clearInterval(temporizadorDeSensores); // ni consultando a la API
     actualizarControles();
   };
 

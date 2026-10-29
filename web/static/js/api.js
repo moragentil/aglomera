@@ -34,8 +34,12 @@ export const api = {
   validar: (filas) => pedir("/api/validar", enviar("POST", { filas })),
   guardar: (nombre, filas, sobrescribir) =>
     pedir("/api/recintos", enviar("POST", { nombre, filas, sobrescribir })),
-  crearSimulacion: (plano, parametros) =>
-    pedir("/api/simulaciones", enviar("POST", { plano, parametros })),
+  crearSimulacion: (plano, parametros, ocupacion = "azar") =>
+    pedir("/api/simulaciones", enviar("POST", { plano, parametros, ocupacion })),
+  sensores: (recinto) => pedir(`/api/sensores/${recinto}`),
+  encenderSensores: (recinto, cuerpo) =>
+    pedir(`/api/sensores/${recinto}/simulador`, enviar("POST", cuerpo)),
+  apagarSensores: (recinto) => pedir(`/api/sensores/${recinto}/simulador`, { method: "DELETE" }),
   pasos: (id, cantidad) => pedir(`/api/simulaciones/${id}/pasos`, enviar("POST", { cantidad })),
   borrarSimulacion: (id) => pedir(`/api/simulaciones/${id}`, { method: "DELETE" }),
   comparar: (planos, semillas, parametros) =>
