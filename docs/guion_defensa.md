@@ -12,7 +12,7 @@ donde se va a presentar.
 | 1 | El problema y el objetivo | 1 min |
 | 2 | Enfoque y pilares de Industria 4.0 | 2 min |
 | 3 | Cómo funciona el modelo | 3 min |
-| 4 | Demo en vivo | 4 min |
+| 4 | Demo en vivo (app web) | 4 min |
 | 5 | Resultados (Monte Carlo) | 3 min |
 | 6 | Qué no salió como esperábamos | 1 min |
 | 7 | Limitaciones y trabajo futuro | 1 min |
@@ -29,16 +29,21 @@ donde se va a presentar.
 - Simulación basada en agentes: cada persona es un agente; los colectivos
   (colas, arqueo, pánico) **emergen**, no están programados.
 - Los tres pilares de la materia:
-  - **Simulación**: el modelo y el visualizador interactivo.
-  - **Big Data y análisis**: corridas Monte Carlo a CSV, analizadas con Pandas.
-  - **IoT**: propuesta de arquitectura (ver [iot.md](iot.md)); aclarar que no
-    está implementada.
+  - **Simulación**: el modelo y la app web, donde se diseña el recinto, se
+    simula y se compara.
+  - **Big Data y análisis**: corridas Monte Carlo a CSV analizadas con Pandas, y
+    la pestaña *Comparar* de la app, que repite cada recinto con varias semillas.
+  - **IoT**: propuesta de arquitectura (ver [iot.md](iot.md)); aclarar que **no
+    está implementada**.
 
 ## 3. Cómo funciona el modelo
 
 Apoyarse en [arquitectura.md](arquitectura.md).
 
 - Una grilla donde cada celda admite una persona, con salidas y muros.
+- **El recinto lo define el usuario**: se dibuja con el mouse, se importa de una
+  imagen dibujada (negro pared, verde salida, sin inteligencia artificial) o se
+  escribe como texto.
 - El *floor field*: un mapa con la distancia de cada celda a la salida más
   cercana, calculado una sola vez.
 - Cada paso tiene tres fases: **evacuar, decidir, resolver conflictos**. Dos
@@ -52,34 +57,49 @@ Preparación (hacerla **antes** de que empiece la defensa):
 
 ```bash
 cd "<carpeta del proyecto>"
-venv/bin/solara run app.py
+venv/bin/uvicorn web.app:app --port 8000
 ```
 
-Abrir `http://localhost:8765`. La app arranca con 40 peatones y semilla fija,
-así que los resultados se repiten. Los números siguientes son los de esa
-configuración (sala de 15x10 con una pared y una puerta de una celda):
+Abrir `http://localhost:8000`. La app **funciona sin conexión** (las librerías y
+las fuentes están dentro del proyecto). Los números siguientes son los de la
+sala con puerta (15x10, con una pared y una puerta de una celda), con 40
+peatones y la semilla 1, así que se repiten idénticos:
 
-| Vecindad (`TIPO_VECINDAD` en `app.py`) | Fricción 0 | Fricción 0.6 | Pánico 0.6 |
+| Vecindad | Sin nada | Fricción 60% | Pánico 60% |
 |---|---|---|---|
-| `von_neumann` | 55 pasos | 86 pasos | 187 pasos |
-| `moore` | 49 pasos | 88 pasos | 108 pasos |
+| 4 direcciones (`von_neumann`, el valor por defecto de la app) | 55 pasos | 86 pasos | 187 pasos |
+| 8 direcciones (`moore`, se elige en el panel) | 49 pasos | 88 pasos | 108 pasos |
 
-Guion de la demo:
+Guion de la demo (unos 4 minutos):
 
-1. **Sin nada activado**, apretar `STEP` unas 6 u 8 veces: los peatones
-   bloqueados se pintan de **rojo** y se amontonan contra la puerta. Es el
-   *arqueo*. Señalar el contador de bloqueados en el título.
-2. Apretar play hasta el final y anotar el paso en que termina.
-3. Subir **fricción a 0.6**, `RESET` y play: termina bastante más tarde.
-   Explicar que es el roce y los empujones en la puerta.
-4. Volver la fricción a 0, subir **pánico a 0.6**, `RESET` y play: la gente
-   deja de ir directo a la salida y sigue a los demás; termina mucho más tarde.
-5. Mostrar el **peatón seguido** (círculo violeta con su recorrido) para ver
-   cuánto tiempo pasa quieto en la cola.
+1. **Diseño (1 min).** Abrir `sala_con_puerta` desde "Recintos guardados" o
+   dibujar un recinto simple (pared con `W`, salida con `E`). Mostrar que el
+   estado de validación avisa en vivo y que **sin una salida no deja guardar ni
+   simular**. Decir que el plano también se puede importar de un dibujo o
+   escribir como texto.
+2. **Simular (2 min).** Apretar "Simular este diseño" (o elegir la sala con
+   puerta) y reproducir. Señalar los peatones **bloqueados en rojo**
+   amontonados en la puerta y la tarjeta "Bloqueados ahora": con esta semilla
+   llegan a **26 de 40 a la vez**. Al terminar: **55 pasos**.
+   - Subir la **fricción a 60%** y "Aplicar y reiniciar": termina en **86**.
+     Explicar que es el roce y los empujones en la puerta.
+   - Volver la fricción a 0, subir el **pánico a 60%** y reiniciar: la gente deja
+     de ir directo a la salida y sigue a los demás; termina en **187**.
+   - Mostrar el **peatón seguido** (anillo violeta con su recorrido) para ver
+     cuánto tiempo pasa quieto en la cola.
+3. **Comparar (1 min).** Elegir `sala_con_puerta` y `dos_salidas`, 40 peatones y
+   10 semillas, y ejecutar. Resultado: **`dos_salidas` evacúa 48% más rápido**
+   (28,0 contra 53,8 pasos medios, con desvíos de ±3,1 y ±2,8). El P95 es 33
+   contra 58 pasos y la congestión máxima, 41% contra 65% de la gente. Aclarar que
+   todos los recintos corren con las **mismas semillas**: la única diferencia es
+   el recinto.
+
+Las apps de Solara (`app.py` y `editor.py`) siguen funcionando, pero la demo se
+hace con la app web.
 
 Plan B si la demo falla: tener una grabación de pantalla o un GIF de la
-simulación ya hechos (ver el pendiente en el tablero) y, aparte, las
-imágenes de los gráficos del notebook.
+simulación ya hechos (ver el pendiente en el tablero) y, aparte, las imágenes
+de los gráficos del notebook y las capturas del informe de la Fase 1.
 
 ## 5. Resultados (Monte Carlo)
 
@@ -104,7 +124,9 @@ es el resultado (el desvío), no una corrida con suerte. Todo se regenera con
   evacuación fue ~22% más rápida (113.0 contra 144.1 pasos), pero la
   congestión máxima en la puerta no bajó (88 contra 86 bloqueados a la vez).
 
-Mostrar los dos gráficos del notebook (barras y curva de evacuación).
+Mostrar los dos gráficos del notebook (barras y curva de evacuación). La
+pestaña *Comparar* de la app aplica el mismo método a recintos dibujados por el
+usuario.
 
 ## 6. Qué no salió como esperábamos
 
@@ -119,15 +141,26 @@ Vale la pena contarlo: muestra que se entienden las hipótesis del modelo.
   sorteándolo en cada paso.
 - Con **pánico total (1.0) la simulación no termina nunca**. Lo tomamos como un
   hallazgo (el pánico absoluto puede impedir escapar), no como un error.
+- Una pared **dibujada en diagonal deja pasar gente** con vecindad de 8
+  direcciones (dos paredes que se tocan solo por la esquina). Lo encontramos al
+  hacer el editor; con 4 direcciones no ocurre. Está documentado y cubierto por
+  un test.
 
 ## 7. Limitaciones y trabajo futuro
 
 - Una celda es una persona y un paso no tiene duración calibrada: sirve para
   **comparar configuraciones**, no para predecir tiempos reales.
 - No está validado contra datos de evacuaciones reales.
-- El recinto está fijo en el código; el siguiente paso es definirlo desde un
-  archivo o un editor, e incluso importar un plano.
-- IoT queda como propuesta de arquitectura.
+- El recinto lo define el usuario, pero **sin escala real**. El importador de
+  dibujos no detecta puertas ni interpreta planos reales de un edificio (con
+  escala, ruido y símbolos): las salidas se marcan a mano en verde.
+- La pestaña *Comparar* muestra media, desvío y P95, pero **todavía no hay un
+  test estadístico formal** que diga si una diferencia es significativa. Es el
+  siguiente paso para el análisis.
+- IoT queda como propuesta de arquitectura. Siguiente paso: un prototipo con
+  sensores simulados que alimenten la simulación a través de la API.
+- Otras mejoras ya anotadas: mapa de calor de densidad, escenarios
+  predeterminados y exportar la simulación como GIF.
 
 ## Preguntas que pueden hacer
 
@@ -146,7 +179,8 @@ No tiene una equivalencia calibrada en segundos; es una unidad del modelo.
 **¿Cómo se asegura que los resultados no son casualidad?**
 Con corridas Monte Carlo: cada escenario se repite con varias semillas y se
 mira el promedio y el desvío. Las semillas fijas hacen que todo sea
-reproducible.
+reproducible. Todavía no calculamos un test de significancia formal, y lo
+decimos como limitación.
 
 **¿Por qué con pánico 1.0 no termina?**
 Porque ningún peatón tiene un momento de lucidez: grupos chicos se siguen
@@ -156,18 +190,40 @@ chance de actuar racionalmente y salir.
 **¿Dónde está el IoT?**
 Es una propuesta de arquitectura, no está implementada. Está descripta en
 [iot.md](iot.md): qué sensores aportarían datos, cómo alimentarían al
-simulador y qué le faltaría al código para soportarlo.
+simulador y qué le faltaría al código para soportarlo. Ahora que existe la API
+web, el siguiente paso es un prototipo con sensores simulados.
 
 **¿Por qué el default es Von Neumann y no Moore?**
 Con 4 direcciones un muro de una celda obliga a dar un desvío real y los
-cuellos de botella se notan; con diagonales se esquivan casi gratis. Las dos
-están disponibles y comparadas.
+cuellos de botella se notan; con diagonales se esquivan casi gratis. Además, con
+diagonales una pared dibujada en diagonal deja pasar gente. Las dos están
+disponibles en la app y comparadas.
+
+**¿El dibujo del plano usa inteligencia artificial?**
+No. Es procesamiento de imagen clásico: se achica el dibujo a una grilla y cada
+celda decide si es pared, salida o piso según el color de sus píxeles. Una
+regla de grosor mínimo evita que una pared fina se pierda entre dos celdas.
+Detectar puertas o la escala en planos reales sí sería un problema abierto.
+
+**¿Qué pasa si el recinto dibujado no tiene salida o tiene una zona cerrada?**
+La validación no deja guardar ni simular un plano sin salida, y el modelo no
+ubica peatones en celdas que no tienen camino a una salida.
+
+**¿Qué tecnología usa la app web?**
+Un servidor FastAPI que usa el mismo modelo, y una pantalla en HTML, CSS y
+JavaScript sin frameworks. Todo está dentro del proyecto, así que funciona sin
+conexión. El diseño visual se hizo con Google Stitch y se adaptó para mostrar
+solo datos que el modelo realmente calcula.
 
 ## Lista de chequeo antes de presentar
 
 - [ ] `venv/bin/python -m pytest tests/ -q` pasa.
-- [ ] La app abre en `http://localhost:8765` y los sliders responden.
-- [ ] Decidir y dejar fijado `TIPO_VECINDAD` en `app.py` antes de la demo.
-- [ ] Anotar los pasos finales de cada escenario de la demo en esta máquina.
+- [ ] La app web abre en `http://localhost:8000`, se puede dibujar, guardar,
+      simular y comparar.
+- [ ] Probar la app **sin conexión** (desconectar el wifi) en la computadora y
+      la pantalla donde se va a presentar.
+- [ ] Verificar que los números de la demo (55, 86 y 187 pasos; 53,8 contra 28,0
+      en Comparar) dan igual en esa máquina.
 - [ ] Tener el plan B (grabación o GIF) y las imágenes de los gráficos listas.
-- [ ] Probar en el equipo y la pantalla donde se va a presentar.
+- [ ] Probar la instalación desde cero (venv nuevo e `pip install -r
+      requirements.txt`).
