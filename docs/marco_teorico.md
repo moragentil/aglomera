@@ -158,6 +158,59 @@ Se distingue por qué un peatón no se mueve:
 Solo el segundo caso cuenta como `bloqueado`, que es la métrica que mide el
 arqueo.
 
+### 5.8 El recinto lo define el usuario
+
+El recinto no está escrito en el código: es un dato. Se puede definir de tres
+formas que terminan en el mismo objeto (ancho, alto, salidas y muros), así que
+el modelo no sabe de dónde vino:
+
+- **Plano de texto**: un carácter por celda (`#` pared, `S` salida, `.` piso),
+  con la primera línea del archivo como la fila de arriba, tal como se ve en
+  pantalla.
+- **Dibujo** (negro pared, verde salida): procesamiento de imagen clásico, **sin
+  inteligencia artificial**. Se achica el dibujo a una grilla y cada celda decide
+  si es pared, salida o piso según el color de los píxeles que le tocan. Hay una
+  decisión de diseño importante: al achicar, una pared fina puede quedar partida
+  entre dos celdas y desaparecer, abriendo un hueco por donde no debería pasar
+  nadie, y eso falla en silencio. Por eso una celda cuenta como pared si tiene al
+  menos medio "grosor mínimo" de píxeles oscuros cruzándola; a cambio, una línea
+  puede salir de dos celdas de ancho.
+- **Editor visual** (en la app web): se pinta con el mouse y arrastrar une los
+  puntos con una recta (algoritmo de Bresenham), de modo que una pared dibujada
+  rápido no deja huecos.
+
+Se valida que haya al menos una salida y que todas las filas midan lo mismo.
+Además, el modelo solo ubica peatones en celdas desde las que hay un camino a
+alguna salida (distancia finita en el *floor field*): un cuarto encerrado en un
+plano dibujado dejaría peatones que nunca pueden evacuar.
+
+**Una consecuencia de la vecindad.** Con 8 direcciones (Moore) un peatón puede
+cruzar en diagonal entre dos paredes que se tocan solo por la esquina, así que
+una pared dibujada "en escalera" deja pasar gente. Con 4 direcciones (Von
+Neumann) no hay filtración. Es una limitación conocida y está cubierta por un
+test; para recintos dibujados a mano, Von Neumann es la opción más segura.
+
+### 5.9 Comparar recintos con varias semillas
+
+Para comparar dos recintos no alcanza una corrida: el resultado depende del
+azar (posiciones iniciales, desempates, fricción). El método es el mismo del
+análisis Monte Carlo: cada recinto se corre con las **mismas semillas** (0 a
+N−1), de modo que la única diferencia entre las corridas de dos recintos es el
+recinto. Se informa:
+
+- la **media y el desvío estándar muestral** de los pasos hasta evacuar a todos;
+- el **percentil 95** (por el método del rango más cercano), que dice cuánto
+  puede tardar en un mal caso;
+- la **congestión máxima**: el mayor número de peatones bloqueados a la vez,
+  promediado entre semillas.
+
+Solo cuentan las corridas que terminaron dentro del máximo de pasos, y el
+"hallazgo" (cuánto más rápido es un recinto) solo compara recintos en los que
+todas las corridas terminaron: si algunas no terminaron, el promedio de pasos no
+es comparable. Una diferencia grande frente al desvío (por ejemplo 28 contra
+53,8 pasos con desvíos de unos 3) es evidente; una diferencia chica no lo es, y
+para eso haría falta un test de significancia, que está pendiente.
+
 ## 6. De la teoría al código
 
 | Concepto | Dónde está |
@@ -169,6 +222,10 @@ arqueo.
 | Fricción | `src/model.py` (`probabilidad_friccion`) |
 | Métricas (evacuados, bloqueados) | `src/model.py` (`DataCollector`) |
 | Monte Carlo | `experiments/run_batch.py` |
+| Recinto definido por el usuario (texto) | `src/recinto.py` |
+| Recinto desde un dibujo (sin IA) | `src/recinto_imagen.py` |
+| Editor visual | `web/static/js/diseno.js` (app web), `src/editor_recinto.py` |
+| Comparación de recintos | `web/servicios.py` (`comparar`) |
 
 ## 7. Limitaciones respecto de la teoría
 
@@ -181,6 +238,11 @@ arqueo.
 - La percepción de la manada es local (radio fijo de 3 celdas) y no modela
   comunicación, visibilidad ni familiaridad con las salidas.
 - No se calibró contra datos reales de evacuaciones.
+- Los recintos dibujados no tienen escala real y el importador no detecta
+  puertas ni interpreta planos de edificios reales.
+- Con vecindad de 8 direcciones, una pared diagonal deja pasar gente (ver 5.8).
+- La comparación de recintos informa media, desvío y percentil 95, pero no
+  incluye un test de significancia estadística.
 
 ## 8. Referencias
 
