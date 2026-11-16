@@ -54,7 +54,7 @@ fenómenos que motivan este TP:
   imitar a los demás en lugar de decidir por sí mismas, y pueden ignorar
   salidas alternativas.
 
-## 4. Autómatas celulares para peatones (Blue & Adler, 2001)
+## 4. Autómatas celulares para peatones (Blue & Adler, 2001; Burstedde et al., 2001)
 
 Alternativa **discreta** al modelo de fuerzas:
 
@@ -66,7 +66,7 @@ Alternativa **discreta** al modelo de fuerzas:
 ### Floor field
 
 Para no calcular un camino por persona en cada paso, se usa un *floor field*
-(campo de piso): un mapa estático donde cada celda guarda su distancia mínima
+(campo de piso, idea de Burstedde et al., 2001): un mapa estático donde cada celda guarda su distancia mínima
 a la salida más cercana. Es como cachear un resultado caro: se calcula una
 vez y después cada peatón solo consulta el valor de sus vecinas.
 
@@ -250,20 +250,22 @@ para eso haría falta un test de significancia, que está pendiente.
 
 ## 8. Referencias
 
-Las tres primeras son las del enunciado del proyecto. Las otras dos son de las
-ideas de fricción y floor field; **conviene verificar los datos
-bibliográficos antes de la entrega**.
+Los datos de cada referencia (volumen, páginas y DOI) se verificaron contra los
+registros de las editoriales y de arXiv.
 
-- Helbing, D. & Molnár, P. (1995). Social force model for pedestrian
-  dynamics. *Physical Review E*.
-- Helbing, D., Farkas, I. & Vicsek, T. (2000). Simulating dynamical features
-  of escape panic. *Nature*.
 - Blue, V. J. & Adler, J. L. (2001). Cellular automata microsimulation for
-  modeling bi-directional pedestrian walkways. *Transportation Research
-  Part B*.
+  modeling bi-directional pedestrian walkways. *Transportation Research Part B:
+  Methodological*, 35(3), 293-312. https://doi.org/10.1016/S0191-2615(99)00052-1
+- Burstedde, C., Klauck, K., Schadschneider, A. & Zittartz, J. (2001).
+  Simulation of pedestrian dynamics using a two-dimensional cellular automaton.
+  *Physica A: Statistical Mechanics and its Applications*, 295(3-4), 507-525.
+  https://doi.org/10.1016/S0378-4371(01)00141-8
+- Helbing, D., Farkas, I. & Vicsek, T. (2000). Simulating dynamical features of
+  escape panic. *Nature*, 407(6803), 487-490.
+  https://doi.org/10.1038/35035023
+- Helbing, D. & Molnár, P. (1995). Social force model for pedestrian dynamics.
+  *Physical Review E*, 51(5), 4282-4286.
+  https://doi.org/10.1103/PhysRevE.51.4282
 - Kirchner, A., Nishinari, K. & Schadschneider, A. (2003). Friction effects and
   clogging in a cellular automaton model for pedestrian dynamics. *Physical
-  Review E*.
-- Burstedde, C., Klauck, K., Schadschneider, A. & Zittartz, J. (2001).
-  Simulation of pedestrian dynamics using a two-dimensional cellular
-  automaton. *Physica A*.
+  Review E*, 67(5), 056122. https://doi.org/10.1103/PhysRevE.67.056122

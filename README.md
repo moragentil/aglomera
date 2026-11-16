@@ -40,6 +40,8 @@ se empuja, se desvía o entra en pánico.
 
 ## Documentación
 
+- [docs/informe_final.md](docs/informe_final.md): **informe final** del proyecto
+  (también en `.docx` y `.pdf`), con capturas de la app, resultados y límites.
 - [docs/informe_fase1.md](docs/informe_fase1.md): informe de la Fase 1
   (entrega parcial), con capturas, resultados y lo que sigue.
 - [docs/marco_teorico.md](docs/marco_teorico.md): la teoría de fondo y las
@@ -47,8 +49,6 @@ se empuja, se desvía o entra en pánico.
 - [docs/arquitectura.md](docs/arquitectura.md): diagramas de los módulos, del
   paso de la simulación y de la decisión de un peatón.
 - [docs/iot.md](docs/iot.md): el prototipo de IoT (qué está implementado y qué es solo propuesta).
-- [docs/guion_defensa.md](docs/guion_defensa.md): borrador del guion de la
-  defensa, con la demo y las preguntas probables.
 
 ## Stack
 
@@ -374,4 +374,5 @@ sus tests pasando. Commits en español y descriptivos.
 
 ## Referencias
 
-Ver [docs/marco_teorico.md](docs/marco_teorico.md).
+Ver [docs/marco_teorico.md](docs/marco_teorico.md), sección 8, con las cinco
+referencias verificadas (volumen, páginas y DOI).

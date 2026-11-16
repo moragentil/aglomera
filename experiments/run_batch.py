@@ -1,7 +1,7 @@
 """Corridas Monte Carlo: repite cada escenario con distintas semillas y guarda
 el historial completo de cada corrida en un CSV dentro de data/results/.
 
-Cada comparación que se cita en el README y en el guion de la defensa es un
+Cada comparación que se cita en el README y en el informe final es un
 experimento con nombre (ver EXPERIMENTOS), así se puede regenerar con un
 comando:
 
