@@ -40,8 +40,9 @@ se empuja, se desvía o entra en pánico.
 
 ## Documentación
 
-- [docs/informe_final.md](docs/informe_final.md): **informe final** del proyecto
-  (también en `.docx` y `.pdf`), con capturas de la app, resultados y límites.
+- [docs/informe_final_SI40.docx](docs/informe_final_SI40.docx): **informe final** del
+  proyecto en el formato de la cátedra (también en
+  [PDF](docs/informe_final_SI40.pdf)), con capturas de la app, resultados y límites.
 - [docs/informe_fase1.md](docs/informe_fase1.md): informe de la Fase 1
   (entrega parcial), con capturas, resultados y lo que sigue.
 - [docs/marco_teorico.md](docs/marco_teorico.md): la teoría de fondo y las
